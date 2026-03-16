@@ -1,6 +1,8 @@
+#!/usr/bin/env bun
 import { Command } from "@effect/cli"
 import { BunContext, BunRuntime } from "@effect/platform-bun"
 import { Effect } from "effect"
+import pkg from "../package.json"
 import { rootCommand } from "./cli/root.js"
 import { addCommand } from "./cli/add.js"
 import { readCommand } from "./cli/read.js"
@@ -14,7 +16,7 @@ const command = rootCommand.pipe(
 
 const cli = Command.run(command, {
   name: "secenv",
-  version: "0.1.0",
+  version: pkg.version,
 })
 
 cli(process.argv).pipe(

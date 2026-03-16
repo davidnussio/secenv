@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -e
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "Error: secenv requires Bun runtime." >&2
+  echo "Install it: https://bun.sh" >&2
+  exit 1
+fi
+
+exec bun "$DIR/../src/main.ts" "$@"

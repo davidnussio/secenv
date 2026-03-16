@@ -12,7 +12,16 @@
       "Bash(security delete-generic-password:*)",
       "Bash(bun add:*)",
       "Bash(bunx tsc:*)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(npm view secenv)",
+      "Bash(bun --version)",
+      "Bash(npm pack --dry-run)",
+      "Bash(chmod +x /Users/david/Developer/github/secenv/src/main.ts)",
+      "Bash(./src/main.ts --help)",
+      "Bash(npm view bun version)",
+      "Bash(npm view bun optionalDependencies)",
+      "Bash(chmod +x /Users/david/Developer/github/secenv/bin/secenv)",
+      "Bash(./bin/secenv --help)"
     ]
   }
 }

@@ -1,21 +1,49 @@
 {
   "name": "secenv",
-  "module": "src/main.ts",
+  "version": "0.1.0",
+  "description": "Secure environment secrets management using macOS Keychain",
   "type": "module",
-  "private": true,
   "bin": {
-    "secenv": "./src/main.ts"
+    "secenv": "./bin/secenv"
   },
-  "devDependencies": {
-    "@types/bun": "latest"
+  "files": [
+    "bin/secenv",
+    "src/**/*.ts"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "os": [
+    "darwin"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run typecheck"
+  },
+  "keywords": [
+    "secrets",
+    "environment-variables",
+    "keychain",
+    "macos",
+    "bun",
+    "effect",
+    "cli"
+  ],
+  "author": "David Nussio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidnussio/secenv.git"
   },
   "dependencies": {
+    "bun": ">=1.0.0",
     "@effect/cli": "^0.73.2",
     "@effect/platform": "^0.94.5",
     "@effect/platform-bun": "^0.87.1",
     "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
   }
 }
