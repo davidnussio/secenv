@@ -21,7 +21,17 @@
       "Bash(npm view bun version)",
       "Bash(npm view bun optionalDependencies)",
       "Bash(chmod +x /Users/david/Developer/github/secenv/bin/secenv)",
-      "Bash(./bin/secenv --help)"
+      "Bash(./bin/secenv --help)",
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -20 {}')",
+      "Bash(npm view @effect/platform-node exports)",
+      "Bash(npm view @effect/platform-node version)",
+      "Bash(npm view better-sqlite3 version)",
+      "Bash(npm view @types/better-sqlite3 version)",
+      "Bash(npm view @effect/platform-node@0.87 version)",
+      "Bash(npm view @effect/platform-bun@0.87.1 peerDependencies)",
+      "Bash(npm view @effect/platform-node versions --json)",
+      "Bash(npm view @effect/platform-node@0.94.2 peerDependencies)",
+      "Bash(npm view @effect/platform-node@0.104.1 peerDependencies)"
     ]
   }
 }

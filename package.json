@@ -4,28 +4,26 @@
   "description": "Secure environment secrets management using macOS Keychain",
   "type": "module",
   "bin": {
-    "secenv": "./bin/secenv"
+    "secenv": "./dist/main.js"
   },
   "files": [
-    "bin/secenv",
-    "src/**/*.ts"
+    "dist"
   ],
   "engines": {
-    "bun": ">=1.0.0"
+    "node": ">=18.0.0"
   },
   "os": [
     "darwin"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run typecheck"
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "secrets",
     "environment-variables",
     "keychain",
     "macos",
-    "bun",
     "effect",
     "cli"
   ],
@@ -39,14 +37,15 @@
     "access": "public"
   },
   "dependencies": {
-    "bun": ">=1.0.0",
     "@effect/cli": "^0.73.2",
     "@effect/platform": "^0.94.5",
-    "@effect/platform-bun": "^0.87.1",
+    "@effect/platform-node": "^0.104.1",
+    "better-sqlite3": "^12.8.0",
     "effect": "^3.19.19"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22",
     "typescript": "^5"
   }
 }

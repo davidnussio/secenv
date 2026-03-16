@@ -1,16 +1,34 @@
+import { execFile } from "node:child_process"
 import { Effect, Layer } from "effect"
 import { KeychainAccess } from "../services/KeychainAccess.js"
 import { KeychainError, SecretNotFoundError } from "../errors.js"
 
 const run = (args: Array<string>) =>
-  Effect.tryPromise({
-    try: () => Bun.$`security ${args}`.nothrow().quiet(),
-    catch: (error) =>
-      new KeychainError({
-        command: args[0] ?? "unknown",
-        stderr: String(error),
-        message: `Failed to run security command`,
-      }),
+  Effect.async<
+    { exitCode: number; stdout: string; stderr: string },
+    KeychainError
+  >((resume) => {
+    execFile("security", args, (error, stdout, stderr) => {
+      if (error && typeof error.code === "string") {
+        resume(
+          Effect.fail(
+            new KeychainError({
+              command: args[0] ?? "unknown",
+              stderr: String(error),
+              message: `Failed to run security command`,
+            }),
+          ),
+        )
+        return
+      }
+      resume(
+        Effect.succeed({
+          exitCode: error ? (error as any).code ?? 1 : 0,
+          stdout,
+          stderr,
+        }),
+      )
+    })
   })
 
 const make = KeychainAccess.of({
@@ -33,7 +51,7 @@ const make = KeychainAccess.of({
     if (result.exitCode !== 0) {
       return yield* new KeychainError({
         command: "add-generic-password",
-        stderr: result.stderr.toString(),
+        stderr: result.stderr,
         message: `Failed to set keychain item: ${service}/${account}`,
       })
     }
@@ -63,12 +81,12 @@ const make = KeychainAccess.of({
     if (result.exitCode !== 0) {
       return yield* new KeychainError({
         command: "find-generic-password",
-        stderr: result.stderr.toString(),
+        stderr: result.stderr,
         message: `Failed to get keychain item: ${service}/${account}`,
       })
     }
 
-    return result.stdout.toString().trim()
+    return result.stdout.trim()
   }),
 
   remove: Effect.fn("MacOsKeychainAccess.remove")(function* (
@@ -86,7 +104,7 @@ const make = KeychainAccess.of({
     if (result.exitCode !== 0) {
       return yield* new KeychainError({
         command: "delete-generic-password",
-        stderr: result.stderr.toString(),
+        stderr: result.stderr,
         message: `Failed to remove keychain item: ${service}/${account}`,
       })
     }

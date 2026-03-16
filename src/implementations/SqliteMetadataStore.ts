@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect"
-import { Database } from "bun:sqlite"
+import Database from "better-sqlite3"
 import { mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
@@ -10,8 +10,8 @@ const dbPath = join(homedir(), ".secenv", "store.sqlite")
 
 const initDb = () => {
   mkdirSync(join(homedir(), ".secenv"), { recursive: true })
-  const db = new Database(dbPath, { create: true })
-  db.run(`
+  const db = new Database(dbPath)
+  db.exec(`
     CREATE TABLE IF NOT EXISTS secrets (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       env        TEXT NOT NULL,
@@ -43,14 +43,13 @@ const make = Effect.gen(function* () {
     ) {
       yield* Effect.try({
         try: () => {
-          db.run(
+          db.prepare(
             `INSERT INTO secrets (env, key, type)
              VALUES (?, ?, ?)
              ON CONFLICT(env, key) DO UPDATE SET
                type = excluded.type,
                updated_at = datetime('now')`,
-            [env, key, type],
-          )
+          ).run(env, key, type)
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -67,7 +66,7 @@ const make = Effect.gen(function* () {
       const row = yield* Effect.try({
         try: () =>
           db
-            .query(
+            .prepare(
               `SELECT key, type, created_at, updated_at FROM secrets WHERE env = ? AND key = ?`,
             )
             .get(env, key) as
@@ -97,7 +96,7 @@ const make = Effect.gen(function* () {
     ) {
       yield* Effect.try({
         try: () => {
-          db.run(`DELETE FROM secrets WHERE env = ? AND key = ?`, [env, key])
+          db.prepare(`DELETE FROM secrets WHERE env = ? AND key = ?`).run(env, key)
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -114,7 +113,7 @@ const make = Effect.gen(function* () {
       return yield* Effect.try({
         try: () =>
           db
-            .query(
+            .prepare(
               `SELECT key, type FROM secrets WHERE env = ? AND key GLOB ?`,
             )
             .all(env, pattern) as Array<{ key: string; type: string }>,
@@ -130,7 +129,7 @@ const make = Effect.gen(function* () {
       return yield* Effect.try({
         try: () =>
           db
-            .query(
+            .prepare(
               `SELECT key, type, updated_at FROM secrets WHERE env = ? ORDER BY key`,
             )
             .all(env) as Array<{
