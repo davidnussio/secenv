@@ -35,6 +35,9 @@
     "type": "git",
     "url": "git+https://github.com/davidnussio/secenv.git"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "bun": ">=1.0.0",
     "@effect/cli": "^0.73.2",
