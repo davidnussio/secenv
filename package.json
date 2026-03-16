@@ -1,6 +1,6 @@
 {
   "name": "@oggi.ch/secenv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Secure environment secrets management using macOS Keychain",
   "type": "module",
   "bin": {
