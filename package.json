@@ -1,6 +1,6 @@
 {
   "name": "envsec",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Secure environment secrets management using macOS Keychain",
   "type": "module",
   "bin": {
