@@ -11,6 +11,7 @@ Secure environment secrets management using native OS credential stores.
 - Search secrets with glob patterns
 - Run commands with secret interpolation
 - Export secrets to `.env` files
+- Load secrets from `.env` files (with conflict detection)
 
 ## Requirements
 
@@ -97,6 +98,21 @@ secenv -e dev env-file --output .env.local
 ```
 
 Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
+
+### Load secrets from a .env file
+
+```bash
+# Import secrets from .env into the environment
+secenv -e dev load
+
+# Specify a custom input file
+secenv -e dev load --input .env.local
+
+# Overwrite existing secrets without warning
+secenv -e dev load --force
+```
+
+Keys are converted from `UPPER_SNAKE_CASE` to `dotted.lowercase` (e.g. `API_TOKEN` → `api.token`). If a key already exists, it is skipped with a warning unless `--force` (`-f`) is provided.
 
 ### Run a command with secrets
 
