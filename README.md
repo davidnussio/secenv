@@ -1,10 +1,11 @@
 # secenv
 
-Secure environment secrets management for macOS using the native Keychain.
+Secure environment secrets management using native OS credential stores.
 
 ## Features
 
-- Store secrets in macOS Keychain (not plain text files)
+- Store secrets in your OS native credential store (not plain text files)
+- Cross-platform: macOS, Linux, Windows
 - Organize secrets by environment (dev, staging, prod, etc.)
 - Track secret types (string, number, boolean) and metadata via SQLite
 - Search secrets with glob patterns
@@ -13,8 +14,32 @@ Secure environment secrets management for macOS using the native Keychain.
 
 ## Requirements
 
-- macOS
 - Node.js >= 18
+
+### macOS
+
+No extra dependencies. Uses the built-in Keychain via the `security` CLI tool.
+
+### Linux
+
+Requires `libsecret-tools` (provides the `secret-tool` command), which talks to GNOME Keyring, KDE Wallet, or any Secret Service API provider via D-Bus.
+
+```bash
+# Debian / Ubuntu
+sudo apt install libsecret-tools
+
+# Fedora
+sudo dnf install libsecret
+
+# Arch
+sudo pacman -S libsecret
+```
+
+A running D-Bus session and a keyring daemon (e.g. `gnome-keyring-daemon`) must be active. Most desktop environments handle this automatically.
+
+### Windows
+
+No extra dependencies. Uses the built-in Windows Credential Manager via `cmdkey` and PowerShell.
 
 ## Installation
 
@@ -94,7 +119,15 @@ secenv -e dev del api.key
 
 ## How it works
 
-Secrets are stored in the macOS Keychain using the `security` command-line tool. Metadata (key names, types, timestamps) is kept in a SQLite database at `~/.secenv/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the Keychain service/account structure.
+Secrets are stored in the native OS credential store. The backend is selected automatically based on the platform:
+
+| OS      | Backend                        | Tool / API                          |
+|---------|--------------------------------|-------------------------------------|
+| macOS   | Keychain                       | `security` CLI                      |
+| Linux   | Secret Service API (D-Bus)     | `secret-tool` (libsecret)           |
+| Windows | Credential Manager             | `cmdkey` + PowerShell (advapi32)    |
+
+Metadata (key names, types, timestamps) is kept in a SQLite database at `~/.secenv/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
 
 ## License
 

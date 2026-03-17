@@ -30,7 +30,10 @@ export const runCommand = Command.make(
       }
 
       try {
-        execSync(resolved, { stdio: "inherit", shell: "/bin/bash" })
+        execSync(resolved, {
+          stdio: "inherit",
+          shell: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+        })
       } catch (e: any) {
         yield* Effect.fail(
           new Error(`Command exited with code ${e.status ?? 1}`),

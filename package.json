@@ -1,7 +1,7 @@
 {
   "name": "envsec",
   "version": "0.1.5",
-  "description": "Secure environment secrets management using macOS Keychain",
+  "description": "Secure environment secrets management using native OS credential stores",
   "type": "module",
   "bin": {
     "secenv": "./dist/main.js"
@@ -12,9 +12,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "os": [
-    "darwin"
-  ],
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build"
@@ -23,7 +20,12 @@
     "secrets",
     "environment-variables",
     "keychain",
+    "credential-manager",
+    "libsecret",
+    "cross-platform",
     "macos",
+    "linux",
+    "windows",
     "effect",
     "cli"
   ],
