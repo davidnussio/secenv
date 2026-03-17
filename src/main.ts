@@ -9,13 +9,15 @@ import { getCommand } from "./cli/read.js"
 import { deleteCommand, delCommand } from "./cli/delete.js"
 import { searchCommand } from "./cli/search.js"
 import { listCommand } from "./cli/list.js"
+import { runCommand } from "./cli/run.js"
+import { envFileCommand } from "./cli/env-file.js"
 import { SecretStore } from "./services/SecretStore.js"
 
 const require = createRequire(import.meta.url)
 const pkg = require("../package.json") as { version: string }
 
 const command = rootCommand.pipe(
-  Command.withSubcommands([addCommand, getCommand, deleteCommand, delCommand, searchCommand, listCommand]),
+  Command.withSubcommands([addCommand, getCommand, deleteCommand, delCommand, searchCommand, listCommand, runCommand, envFileCommand]),
 )
 
 const cli = Command.run(command, {
