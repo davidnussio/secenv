@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "secenv",
+      "name": "envsec",
       "dependencies": {
         "@effect/cli": "^0.73.2",
         "@effect/platform": "^0.94.5",

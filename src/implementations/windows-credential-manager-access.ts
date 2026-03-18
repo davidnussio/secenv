@@ -11,7 +11,7 @@ import { KeychainAccess } from "../services/keychain-access.js";
  *
  * No extra dependencies required — uses only built-in Windows APIs via PowerShell.
  *
- * Credential target format: "secenv:<service>/<account>"
+ * Credential target format: "envsec:<service>/<account>"
  */
 
 const runPowerShell = (script: string) =>
@@ -54,7 +54,7 @@ const runPowerShell = (script: string) =>
 const escapePS = (s: string) => s.replaceAll("'", "''");
 
 const targetName = (service: string, account: string) =>
-  `secenv:${service}/${account}`;
+  `envsec:${service}/${account}`;
 
 const make = KeychainAccess.of({
   set: Effect.fn("WindowsCredentialManagerAccess.set")(function* (

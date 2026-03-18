@@ -1,4 +1,4 @@
-# secenv
+# envsec
 
 Secure environment secrets management using native OS credential stores.
 
@@ -46,11 +46,11 @@ No extra dependencies. Uses the built-in Windows Credential Manager via `cmdkey`
 ## Installation
 
 ```bash
-npm install -g secenv
+npm install -g envsec
 ```
 
 ```bash
-npx secenv
+npx envsec
 ```
 
 ## Usage
@@ -62,52 +62,52 @@ A context is a free-form label for grouping secrets — e.g. `myapp.dev`, `strip
 
 ```bash
 # Store a value inline
-secenv -c myapp.dev add api.key --value "sk-abc123"
+envsec -c myapp.dev add api.key --value "sk-abc123"
 
 # Or use the short alias
-secenv -c myapp.dev add api.key -v "sk-abc123"
+envsec -c myapp.dev add api.key -v "sk-abc123"
 
 # Omit --value for an interactive masked prompt
-secenv -c myapp.dev add api.key
+envsec -c myapp.dev add api.key
 ```
 
 ### Get a secret
 
 ```bash
-secenv -c myapp.dev get api.key
+envsec -c myapp.dev get api.key
 ```
 
 ### List all secrets in a context
 
 ```bash
-secenv -c myapp.dev list
+envsec -c myapp.dev list
 ```
 
 ### List all contexts
 
 ```bash
 # Without --context, lists all available contexts with secret counts
-secenv list
+envsec list
 ```
 
 ### Search secrets
 
 ```bash
 # Search secrets within a context
-secenv -c myapp.dev search "api.*"
+envsec -c myapp.dev search "api.*"
 
 # Search contexts by pattern (without --context)
-secenv search "myapp.*"
+envsec search "myapp.*"
 ```
 
 ### Generate a .env file
 
 ```bash
 # Creates .env with all secrets from the context
-secenv -c myapp.dev env-file
+envsec -c myapp.dev env-file
 
 # Specify a custom output path
-secenv -c myapp.dev env-file --output .env.local
+envsec -c myapp.dev env-file --output .env.local
 ```
 
 Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
@@ -116,13 +116,13 @@ Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
 
 ```bash
 # Import secrets from .env into the context
-secenv -c myapp.dev load
+envsec -c myapp.dev load
 
 # Specify a custom input file
-secenv -c myapp.dev load --input .env.local
+envsec -c myapp.dev load --input .env.local
 
 # Overwrite existing secrets without warning
-secenv -c myapp.dev load --force
+envsec -c myapp.dev load --force
 ```
 
 Keys are converted from `UPPER_SNAKE_CASE` to `dotted.lowercase` (e.g. `API_TOKEN` → `api.token`). If a key already exists, it is skipped with a warning unless `--force` (`-f`) is provided.
@@ -131,16 +131,16 @@ Keys are converted from `UPPER_SNAKE_CASE` to `dotted.lowercase` (e.g. `API_TOKE
 
 ```bash
 # Placeholders {key} are resolved with secret values before execution
-secenv -c myapp.dev run 'curl {api.url} -H "Authorization: Bearer {api.token}"'
+envsec -c myapp.dev run 'curl {api.url} -H "Authorization: Bearer {api.token}"'
 
 # Any {dotted.key} in the command string is replaced with its value
-secenv -c myapp.prod run 'psql {db.connection_string}'
+envsec -c myapp.prod run 'psql {db.connection_string}'
 
 # Save the command for later use with --save (-s) and --name (-n)
-secenv -c myapp.dev run --save --name deploy 'kubectl apply -f - <<< {k8s.manifest}'
+envsec -c myapp.dev run --save --name deploy 'kubectl apply -f - <<< {k8s.manifest}'
 
 # If you use --save without --name, you'll be prompted interactively
-secenv -c myapp.dev run --save 'psql {db.connection_string}'
+envsec -c myapp.dev run --save 'psql {db.connection_string}'
 ```
 
 If any placeholder references a secret that doesn't exist, the command won't execute and you'll see a clear error:
@@ -150,7 +150,7 @@ If any placeholder references a secret that doesn't exist, the command won't exe
   - api.url
   - api.token
 
-Add them with: secenv -c myapp.dev add <key>
+Add them with: envsec -c myapp.dev add <key>
 ```
 
 ### Saved commands
@@ -159,35 +159,35 @@ Saved commands live under the `cmd` subcommand, keeping them separate from secre
 
 ```bash
 # List all saved commands
-secenv cmd list
+envsec cmd list
 
 # Run a saved command (uses the context it was saved with)
-secenv cmd run deploy
+envsec cmd run deploy
 
 # Override the context at execution time
-secenv cmd run deploy --override-context myapp.prod
-secenv cmd run deploy -o myapp.prod
+envsec cmd run deploy --override-context myapp.prod
+envsec cmd run deploy -o myapp.prod
 
 # Search saved commands (searches both names and command strings)
-secenv cmd search psql
+envsec cmd search psql
 
 # Search only by name
-secenv cmd search deploy -n
+envsec cmd search deploy -n
 
 # Search only by command string
-secenv cmd search kubectl -m
+envsec cmd search kubectl -m
 
 # Delete a saved command
-secenv cmd delete deploy
+envsec cmd delete deploy
 ```
 
 ### Delete a secret
 
 ```bash
-secenv -c myapp.dev delete api.key
+envsec -c myapp.dev delete api.key
 
 # or use the alias
-secenv -c myapp.dev del api.key
+envsec -c myapp.dev del api.key
 ```
 
 ## How it works
@@ -200,7 +200,7 @@ Secrets are stored in the native OS credential store. The backend is selected au
 | Linux   | Secret Service API (D-Bus)     | `secret-tool` (libsecret)           |
 | Windows | Credential Manager             | `cmdkey` + PowerShell (advapi32)    |
 
-Metadata (key names, timestamps) is kept in a SQLite database at `~/.secenv/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
+Metadata (key names, timestamps) is kept in a SQLite database at `~/.envsec/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
 
 ## License
 

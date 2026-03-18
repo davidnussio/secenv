@@ -40,7 +40,7 @@ export const resolveCommand = (
 
     if (missing.length > 0) {
       const keys = missing.map((k) => `  - ${k}`).join("\n");
-      const message = `Missing secrets in context "${ctx}":\n${keys}\n\nAdd them with: secenv -c ${ctx} add <key>`;
+      const message = `Missing secrets in context "${ctx}":\n${keys}\n\nAdd them with: envsec -c ${ctx} add <key>`;
       yield* Console.error(`❌ ${message}`);
       return yield* Effect.fail(new Error(message));
     }

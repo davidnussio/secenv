@@ -29,7 +29,7 @@ export const parse = Effect.fn("SecretKey.parse")(function* (
   }
 
   return {
-    service: `secenv.${env}.${serviceParts.join(".")}`,
+    service: `envsec.${env}.${serviceParts.join(".")}`,
     account,
   } satisfies ParsedKey;
 });

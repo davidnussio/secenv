@@ -13,7 +13,7 @@ import {
   MetadataStore,
 } from "../services/metadata-store.js";
 
-const dbDir = join(homedir(), ".secenv");
+const dbDir = join(homedir(), ".envsec");
 const dbPath = join(dbDir, "store.sqlite");
 
 const initDb = async (): Promise<Database> => {

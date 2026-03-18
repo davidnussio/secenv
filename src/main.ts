@@ -34,7 +34,7 @@ const command = rootCommand.pipe(
 );
 
 const cli = Command.run(command, {
-  name: "secenv",
+  name: "envsec",
   version: pkg.version,
 });
 

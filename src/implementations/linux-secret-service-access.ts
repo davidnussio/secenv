@@ -66,7 +66,7 @@ const make = KeychainAccess.of({
       [
         "store",
         "--label",
-        `secenv:${service}/${account}`,
+        `envsec:${service}/${account}`,
         "service",
         service,
         "account",

@@ -14,4 +14,4 @@ const debug = Options.boolean("debug").pipe(
   Options.withDefault(false)
 );
 
-export const rootCommand = Command.make("secenv", { context, debug });
+export const rootCommand = Command.make("envsec", { context, debug });
