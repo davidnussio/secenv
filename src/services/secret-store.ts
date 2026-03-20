@@ -19,7 +19,15 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
     ) {
       const parsed = yield* parseSecretKey(key, context);
       yield* keychain.set(parsed.service, parsed.account, value);
-      yield* metadata.upsert(context, key);
+      yield* metadata
+        .upsert(context, key)
+        .pipe(
+          Effect.catchAll((metadataError) =>
+            keychain
+              .remove(parsed.service, parsed.account)
+              .pipe(Effect.ignore, Effect.andThen(Effect.fail(metadataError)))
+          )
+        );
     });
 
     const get = Effect.fn("SecretStore.get")(function* (
@@ -37,7 +45,15 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
     ) {
       const parsed = yield* parseSecretKey(key, context);
       yield* keychain.remove(parsed.service, parsed.account);
-      yield* metadata.remove(context, key);
+      yield* metadata
+        .remove(context, key)
+        .pipe(
+          Effect.catchAll((metadataError) =>
+            keychain
+              .set(parsed.service, parsed.account, "")
+              .pipe(Effect.ignore, Effect.andThen(Effect.fail(metadataError)))
+          )
+        );
     });
 
     const search = Effect.fn("SecretStore.search")(function* (

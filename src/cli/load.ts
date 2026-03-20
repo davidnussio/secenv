@@ -56,6 +56,9 @@ export const loadCommand = Command.make(
       let skipped = 0;
       let overwritten = 0;
 
+      const existingSecrets = yield* SecretStore.list(ctx);
+      const existingKeys = new Set(existingSecrets.map((item) => item.key));
+
       for (const line of lines) {
         const parsed = parseLine(line);
         if (!parsed) {
@@ -64,9 +67,7 @@ export const loadCommand = Command.make(
 
         const secretKey = parsed.key.toLowerCase().replaceAll("_", ".");
 
-        const exists = yield* SecretStore.list(ctx).pipe(
-          Effect.map((items) => items.some((item) => item.key === secretKey))
-        );
+        const exists = existingKeys.has(secretKey);
 
         if (exists && !force) {
           yield* Console.log(
@@ -83,6 +84,7 @@ export const loadCommand = Command.make(
         }
 
         yield* SecretStore.set(ctx, secretKey, parsed.value);
+        existingKeys.add(secretKey);
       }
 
       yield* Console.log(

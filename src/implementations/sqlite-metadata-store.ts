@@ -315,7 +315,6 @@ const make = Effect.gen(function* () {
       return yield* Effect.try({
         try: () => {
           const results: CommandMetadata[] = [];
-          const glob = `*${pattern}*`;
           let query: string;
           if (field === "name") {
             query =
@@ -328,7 +327,7 @@ const make = Effect.gen(function* () {
               "SELECT name, command, context, created_at FROM commands WHERE name GLOB ? OR command GLOB ? ORDER BY name";
           }
           const stmt = db.prepare(query);
-          stmt.bind(field === "all" ? [glob, glob] : [glob]);
+          stmt.bind(field === "all" ? [pattern, pattern] : [pattern]);
           while (stmt.step()) {
             results.push(stmt.getAsObject() as unknown as CommandMetadata);
           }
@@ -370,13 +369,24 @@ const make = Effect.gen(function* () {
       yield* Effect.try({
         try: () => {
           db.run("DELETE FROM commands WHERE name = ?", [name]);
+          const rowsModified = db.getRowsModified();
+          if (rowsModified === 0) {
+            throw new CommandNotFoundError({
+              name,
+              message: `Command not found: "${name}"`,
+            });
+          }
           persist(db);
         },
-        catch: (error) =>
-          new MetadataStoreError({
+        catch: (error) => {
+          if (error instanceof CommandNotFoundError) {
+            return error;
+          }
+          return new MetadataStoreError({
             operation: "removeCommand",
             message: `Failed to remove command "${name}": ${error}`,
-          }),
+          });
+        },
       });
     }),
   });

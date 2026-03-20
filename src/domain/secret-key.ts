@@ -18,6 +18,13 @@ export const parse = Effect.fn("SecretKey.parse")(function* (
     });
   }
 
+  if (parts.some((p) => p === "")) {
+    return yield* new InvalidKeyError({
+      key,
+      message: `Key "${key}" contains empty parts — each dot-separated segment must be non-empty`,
+    });
+  }
+
   const account = parts.at(-1);
   const serviceParts = parts.slice(0, -1);
 

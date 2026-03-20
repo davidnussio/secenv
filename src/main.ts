@@ -2,7 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Effect, Layer, Logger, LogLevel } from "effect";
+import { Effect } from "effect";
 import { addCommand } from "./cli/add.js";
 import { cmdCommand } from "./cli/cmd.js";
 import { delCommand, deleteCommand } from "./cli/delete.js";
@@ -38,16 +38,8 @@ const cli = Command.run(command, {
   version: pkg.version,
 });
 
-const debugFlag =
-  process.argv.includes("-d") || process.argv.includes("--debug");
-
-const logLayer = debugFlag
-  ? Logger.minimumLogLevel(LogLevel.All)
-  : Logger.minimumLogLevel(LogLevel.None);
-
 cli(process.argv).pipe(
   Effect.provide(SecretStore.Default),
   Effect.provide(NodeContext.layer),
-  Effect.provide(Layer.mergeAll(logLayer)),
   NodeRuntime.runMain
 );

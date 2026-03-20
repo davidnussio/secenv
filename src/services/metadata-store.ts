@@ -70,7 +70,7 @@ export class MetadataStore extends Context.Tag("MetadataStore")<
     >;
     readonly removeCommand: (
       name: string
-    ) => Effect.Effect<void, MetadataStoreError>;
+    ) => Effect.Effect<void, CommandNotFoundError | MetadataStoreError>;
   }
 >() {}
 
