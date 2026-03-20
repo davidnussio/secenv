@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import initSqlJs, { type Database } from "sql.js";
 import {
   CommandNotFoundError,
@@ -13,15 +13,23 @@ import {
   MetadataStore,
 } from "../services/metadata-store.js";
 
-const dbDir = join(homedir(), ".envsec");
-const dbPath = join(dbDir, "store.sqlite");
+const MEMORY_DB = ":memory:" as const;
 
-const initDb = async (): Promise<Database> => {
-  mkdirSync(dbDir, { recursive: true });
+const initDb = async (dbPath: string): Promise<Database> => {
   const SQL = await initSqlJs();
-  const db = existsSync(dbPath)
-    ? new SQL.Database(readFileSync(dbPath))
-    : new SQL.Database();
+  let db: Database;
+
+  const inMemory = dbPath === MEMORY_DB;
+
+  if (inMemory) {
+    db = new SQL.Database();
+  } else {
+    mkdirSync(join(dbPath, ".."), { recursive: true });
+    db = existsSync(dbPath)
+      ? new SQL.Database(readFileSync(dbPath))
+      : new SQL.Database();
+  }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS secrets (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,23 +50,48 @@ const initDb = async (): Promise<Database> => {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
-  persist(db);
+
+  if (!inMemory) {
+    persist(db, dbPath);
+  }
+
   return db;
 };
 
-const persist = (db: Database) => {
+const persist = (db: Database, dbPath: string) => {
   writeFileSync(dbPath, Buffer.from(db.export()));
 };
 
+export interface MetadataStoreConfig {
+  readonly dbPath: string;
+}
+
+export const MetadataStoreConfig = Context.GenericTag<MetadataStoreConfig>(
+  "@services/MetadataStoreConfig"
+);
+
 const make = Effect.gen(function* () {
+  const config = yield* Effect.serviceOption(MetadataStoreConfig);
+
+  const dbPath = Option.match(config, {
+    onNone: () => MEMORY_DB,
+    onSome: (conf) => conf.dbPath,
+  });
+
   const db = yield* Effect.tryPromise({
-    try: () => initDb(),
+    try: () => initDb(dbPath),
     catch: (error) =>
       new MetadataStoreError({
         operation: "init",
         message: `Failed to initialize database: ${error}`,
       }),
   });
+
+  const save = () => {
+    if (dbPath !== MEMORY_DB) {
+      persist(db, dbPath);
+    }
+  };
 
   return MetadataStore.of({
     upsert: Effect.fn("SqliteMetadataStore.upsert")(function* (
@@ -69,12 +102,12 @@ const make = Effect.gen(function* () {
         try: () => {
           db.run(
             `INSERT INTO secrets (env, key, type)
-             VALUES (?, ?, 'string')
-             ON CONFLICT(env, key) DO UPDATE SET
-               updated_at = datetime('now')`,
+               VALUES (?, ?, 'string')
+               ON CONFLICT(env, key) DO UPDATE SET
+                 updated_at = datetime('now')`,
             [env, key]
           );
-          persist(db);
+          save();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -131,7 +164,7 @@ const make = Effect.gen(function* () {
       yield* Effect.try({
         try: () => {
           db.run("DELETE FROM secrets WHERE env = ? AND key = ?", [env, key]);
-          persist(db);
+          save();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -258,13 +291,13 @@ const make = Effect.gen(function* () {
         try: () => {
           db.run(
             `INSERT INTO commands (name, command, context)
-             VALUES (?, ?, ?)
-             ON CONFLICT(name) DO UPDATE SET
-               command = excluded.command,
-               context = excluded.context`,
+               VALUES (?, ?, ?)
+               ON CONFLICT(name) DO UPDATE SET
+                 command = excluded.command,
+                 context = excluded.context`,
             [name, command, context]
           );
-          persist(db);
+          save();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -370,7 +403,7 @@ const make = Effect.gen(function* () {
       yield* Effect.try({
         try: () => {
           db.run("DELETE FROM commands WHERE name = ?", [name]);
-          persist(db);
+          save();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -382,4 +415,11 @@ const make = Effect.gen(function* () {
   });
 });
 
-export const SqliteMetadataStoreLive = Layer.effect(MetadataStore, make);
+export const SqliteMetadataStore = Layer.effect(MetadataStore, make);
+
+const liveDbPath = join(homedir(), ".envsec", "store.sqlite");
+const ConfigLive = Layer.succeed(MetadataStoreConfig, { dbPath: liveDbPath });
+
+export const SqliteMetadataStoreLive = SqliteMetadataStore.pipe(
+  Layer.provide(ConfigLive)
+);
