@@ -128,3 +128,58 @@
     @apply font-sans;
   }
 }
+
+/* Hero fade-in animation — no JS needed for LCP content */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out both;
+}
+
+@keyframes terminal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-terminal-fade-in {
+  animation: terminal-fade-in 0.6s ease-out 0.4s both;
+}
+
+/* Scroll-triggered reveal for below-the-fold sections */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-reveal {
+  animation: reveal 0.6s ease-out forwards;
+}
+
+@supports (animation-timeline: view()) {
+  .animate-reveal {
+    opacity: 0;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+}

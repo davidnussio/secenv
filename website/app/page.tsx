@@ -38,7 +38,7 @@ export default function Home() {
         type="application/ld+json"
       />
       <Navbar />
-      <main>
+      <main className="px-6 py-12 md:px-12">
         <Hero />
         <Features />
         <HowItWorks />

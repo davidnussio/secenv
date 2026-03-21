@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { motion } from "motion/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -24,12 +23,7 @@ export function InstallSection() {
   return (
     <section className="relative px-6 py-32" id="install">
       <div className="mx-auto max-w-2xl text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          whileInView={{ opacity: 1, y: 0 }}
-        >
+        <div className="animate-reveal">
           <p className="mb-3 font-mono text-emerald-400 text-sm">Install</p>
           <h2 className="mb-4 font-bold text-4xl tracking-tight md:text-5xl">
             Ready in seconds
@@ -37,14 +31,9 @@ export function InstallSection() {
           <p className="mb-10 text-lg text-muted-foreground">
             One command. No config. Node.js 18+ required.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
-          whileInView={{ opacity: 1, y: 0 }}
-        >
+        <div className="animate-reveal">
           {/* Tabs */}
           <div className="mb-4 flex justify-center gap-2">
             {INSTALL_OPTIONS.map((opt, i) => (
@@ -83,7 +72,7 @@ export function InstallSection() {
               )}
             </Button>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

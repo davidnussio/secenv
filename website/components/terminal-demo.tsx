@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 const LINES = [
@@ -31,6 +30,9 @@ const LINES = [
   { prompt: false, text: "  ✓ api.key        no expiry set" },
 ] as const;
 
+const PROMPT_DELAY = 800;
+const OUTPUT_DELAY = 300;
+
 export function TerminalDemo() {
   const [visibleLines, setVisibleLines] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -39,7 +41,7 @@ export function TerminalDemo() {
     if (visibleLines >= LINES.length) {
       return;
     }
-    const delay = LINES[visibleLines]?.prompt ? 800 : 300;
+    const delay = LINES[visibleLines]?.prompt ? PROMPT_DELAY : OUTPUT_DELAY;
     const timer = setTimeout(() => setVisibleLines((v) => v + 1), delay);
     return () => clearTimeout(timer);
   }, [visibleLines]);
@@ -57,12 +59,7 @@ export function TerminalDemo() {
   });
 
   return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-3xl overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl shadow-emerald-500/5"
-      initial={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.6, delay: 0.4 }}
-    >
+    <div className="w-full max-w-3xl animate-terminal-fade-in overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl shadow-emerald-500/5">
       {/* Title bar */}
       <div className="flex items-center gap-2 border-white/5 border-b px-4 py-3">
         <div className="h-3 w-3 rounded-full bg-red-500/80" />
@@ -90,7 +87,7 @@ export function TerminalDemo() {
             ) : (
               <>
                 <span className="invisible mr-2 w-[ch] shrink-0">$</span>
-                <span className="min-w-0 text-zinc-500">{line.text}</span>
+                <span className="min-w-0 text-zinc-400">{line.text}</span>
               </>
             )}
           </div>
@@ -102,6 +99,6 @@ export function TerminalDemo() {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

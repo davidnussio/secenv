@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Clock,
   FileText,
@@ -10,7 +8,6 @@ import {
   Shield,
   Terminal,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const FEATURES = [
@@ -68,30 +65,18 @@ export function Features() {
   return (
     <section className="relative px-6 py-32" id="features">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          className="mb-16 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          whileInView={{ opacity: 1, y: 0 }}
-        >
+        <div className="mb-16 animate-reveal text-center">
           <p className="mb-3 font-mono text-emerald-400 text-sm">Features</p>
           <h2 className="font-bold text-4xl tracking-tight md:text-5xl">
             Everything you need.
             <br />
             Nothing you don&apos;t.
           </h2>
-        </motion.div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature, i) => (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              key={feature.title}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
-              viewport={{ once: true }}
-              whileInView={{ opacity: 1, y: 0 }}
-            >
+          {FEATURES.map((feature) => (
+            <div className="animate-reveal" key={feature.title}>
               <Card className="h-full border-white/5 bg-zinc-950/50 transition-colors hover:border-emerald-500/20 hover:bg-zinc-950">
                 <CardContent className="p-6">
                   <feature.icon className="mb-4 h-8 w-8 text-emerald-400" />
@@ -101,7 +86,7 @@ export function Features() {
                   </p>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
