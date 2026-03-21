@@ -1,5 +1,3 @@
-# npm test
-
 # ultracite
 #!/bin/sh
 # Exit on any error
@@ -29,3 +27,6 @@ if [ $FORMAT_EXIT_CODE -ne 0 ]; then
 fi
 
 echo "✨ Files formatted by Ultracite"
+
+pnpm run build
+bash test/e2e-test.sh
