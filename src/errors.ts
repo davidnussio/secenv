@@ -41,3 +41,52 @@ export class CommandNotFoundError extends Schema.TaggedError<CommandNotFoundErro
     message: Schema.String,
   }
 ) {}
+
+export class EmptyValueError extends Schema.TaggedError<EmptyValueError>()(
+  "EmptyValueError",
+  {
+    field: Schema.String,
+    message: Schema.String,
+  }
+) {}
+
+export class AbortedError extends Schema.TaggedError<AbortedError>()(
+  "AbortedError",
+  {
+    message: Schema.String,
+  }
+) {}
+
+export class CommandExecutionError extends Schema.TaggedError<CommandExecutionError>()(
+  "CommandExecutionError",
+  {
+    command: Schema.String,
+    exitCode: Schema.Number,
+    message: Schema.String,
+  }
+) {}
+
+export class MissingSecretsError extends Schema.TaggedError<MissingSecretsError>()(
+  "MissingSecretsError",
+  {
+    keys: Schema.Array(Schema.String),
+    context: Schema.String,
+    message: Schema.String,
+  }
+) {}
+
+export class UnsupportedPlatformError extends Schema.TaggedError<UnsupportedPlatformError>()(
+  "UnsupportedPlatformError",
+  {
+    platform: Schema.String,
+    message: Schema.String,
+  }
+) {}
+
+export class FileAccessError extends Schema.TaggedError<FileAccessError>()(
+  "FileAccessError",
+  {
+    path: Schema.String,
+    message: Schema.String,
+  }
+) {}

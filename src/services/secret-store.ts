@@ -108,6 +108,14 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
       yield* metadata.removeCommand(name);
     });
 
+    const beginBatch = Effect.fn("SecretStore.beginBatch")(function* () {
+      yield* metadata.beginBatch();
+    });
+
+    const endBatch = Effect.fn("SecretStore.endBatch")(function* () {
+      yield* metadata.endBatch();
+    });
+
     return {
       set,
       get,
@@ -121,6 +129,8 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
       searchCommands,
       listCommands,
       removeCommand,
+      beginBatch,
+      endBatch,
     };
   }),
 }) {}

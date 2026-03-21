@@ -71,6 +71,8 @@ export class MetadataStore extends Context.Tag("MetadataStore")<
     readonly removeCommand: (
       name: string
     ) => Effect.Effect<void, CommandNotFoundError | MetadataStoreError>;
+    readonly beginBatch: () => Effect.Effect<void, MetadataStoreError>;
+    readonly endBatch: () => Effect.Effect<void, MetadataStoreError>;
   }
 >() {}
 

@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { Args, Command, Options } from "@effect/cli";
 import { Console, Effect, Option } from "effect";
+import { CommandExecutionError, EmptyValueError } from "../errors.js";
 import { SecretStore } from "../services/secret-store.js";
 import type { ResolvedCommand } from "./resolve-command.js";
 import { resolveCommand } from "./resolve-command.js";
@@ -24,7 +25,7 @@ const name = Options.text("name").pipe(
   Options.optional
 );
 
-const readLine = (prompt: string): Effect.Effect<string, Error> =>
+const readLine = (prompt: string): Effect.Effect<string> =>
   Effect.async((resume) => {
     process.stdout.write(prompt);
     process.stdin.resume();
@@ -41,21 +42,26 @@ const readLine = (prompt: string): Effect.Effect<string, Error> =>
 
 const executeCommand = (
   resolved: ResolvedCommand
-): Effect.Effect<void, Error> =>
-  Effect.gen(function* () {
-    try {
+): Effect.Effect<void, CommandExecutionError> =>
+  Effect.try({
+    try: () => {
       execSync(resolved.command, {
         stdio: "inherit",
         shell: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
         env: { ...process.env, ...resolved.env },
       });
-    } catch (e: unknown) {
+    },
+    catch: (e) => {
       const status =
         e instanceof Error && "status" in e
           ? (e as { status: number }).status
           : 1;
-      yield* Effect.fail(new Error(`Command exited with code ${status}`));
-    }
+      return new CommandExecutionError({
+        command: resolved.command,
+        exitCode: status,
+        message: `Command exited with code ${status}`,
+      });
+    },
   });
 
 export const runCommand = Command.make(
@@ -71,9 +77,10 @@ export const runCommand = Command.make(
           : yield* readLine("Command name: ");
 
         if (cmdName.trim() === "") {
-          return yield* Effect.fail(
-            new Error("Command name cannot be empty when using --save")
-          );
+          return yield* new EmptyValueError({
+            field: "name",
+            message: "Command name cannot be empty when using --save",
+          });
         }
 
         yield* SecretStore.saveCommand(cmdName, cmd, ctx);

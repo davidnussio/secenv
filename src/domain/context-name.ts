@@ -64,4 +64,4 @@ export const ContextName = Schema.compose(
   validFormat
 ).pipe(Schema.brand("ContextName"));
 
-export type ContextName = typeof ContextName.Type;
+export type ContextName = Schema.Schema.Type<typeof ContextName>;

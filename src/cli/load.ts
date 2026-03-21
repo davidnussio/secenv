@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
+import { FileAccessError } from "../errors.js";
 import { SecretStore } from "../services/secret-store.js";
 import { requireContext } from "./root.js";
 
@@ -13,6 +14,14 @@ const input = Options.text("input").pipe(
 const force = Options.boolean("force").pipe(
   Options.withAlias("f"),
   Options.withDescription("Overwrite existing secrets without prompting")
+);
+
+const batch = Options.boolean("batch").pipe(
+  Options.withAlias("b"),
+  Options.withDescription(
+    "Batch mode: defer database persistence until all secrets are imported"
+  ),
+  Options.withDefault(false)
 );
 
 const parseLine = (line: string): { key: string; value: string } | null => {
@@ -34,14 +43,18 @@ const parseLine = (line: string): { key: string; value: string } | null => {
 
 export const loadCommand = Command.make(
   "load",
-  { input, force },
-  ({ input, force }) =>
+  { input, force, batch },
+  ({ input, force, batch }) =>
     Effect.gen(function* () {
       const ctx = yield* requireContext;
 
       const content = yield* Effect.try({
         try: () => readFileSync(input, "utf-8"),
-        catch: () => new Error(`Cannot read file: ${input}`),
+        catch: () =>
+          new FileAccessError({
+            path: input,
+            message: `Cannot read file: ${input}`,
+          }),
       });
 
       const lines = content.split("\n");
@@ -51,6 +64,10 @@ export const loadCommand = Command.make(
 
       const existingSecrets = yield* SecretStore.list(ctx);
       const existingKeys = new Set(existingSecrets.map((item) => item.key));
+
+      if (batch) {
+        yield* SecretStore.beginBatch();
+      }
 
       for (const line of lines) {
         const parsed = parseLine(line);
@@ -78,6 +95,10 @@ export const loadCommand = Command.make(
 
         yield* SecretStore.set(ctx, secretKey, parsed.value);
         existingKeys.add(secretKey);
+      }
+
+      if (batch) {
+        yield* SecretStore.endBatch();
       }
 
       yield* Console.log(

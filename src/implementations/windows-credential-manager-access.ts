@@ -51,7 +51,21 @@ const runPowerShell = (script: string) =>
     );
   });
 
-const escapePS = (s: string) => s.replaceAll("'", "''");
+/**
+ * Escape a string for use inside PowerShell single-quoted strings.
+ * Single quotes are doubled, and the string is safe from backtick,
+ * dollar sign, and other PS metacharacter interpretation.
+ *
+ * For here-string contexts or unquoted usage, additional characters
+ * (backtick, $, ", null byte) are also escaped to prevent injection.
+ */
+const escapePS = (s: string): string =>
+  s
+    .replaceAll("'", "''")
+    .replaceAll("`", "``")
+    .replaceAll("$", "`$")
+    .replaceAll('"', '`"')
+    .replaceAll("\0", "");
 
 const targetName = (service: string, account: string) =>
   `envsec:${service}/${account}`;

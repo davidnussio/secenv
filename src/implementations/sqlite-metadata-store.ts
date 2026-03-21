@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Effect, Layer } from "effect";
@@ -16,8 +22,12 @@ import {
 const dbDir = join(homedir(), ".envsec");
 const dbPath = join(dbDir, "store.sqlite");
 
+const DIR_PERMISSIONS = 0o700;
+const FILE_PERMISSIONS = 0o600;
+
 const initDb = async (): Promise<Database> => {
-  mkdirSync(dbDir, { recursive: true });
+  mkdirSync(dbDir, { recursive: true, mode: DIR_PERMISSIONS });
+  chmodSync(dbDir, DIR_PERMISSIONS);
   const SQL = await initSqlJs();
   const db = existsSync(dbPath)
     ? new SQL.Database(readFileSync(dbPath))
@@ -47,7 +57,7 @@ const initDb = async (): Promise<Database> => {
 };
 
 const persist = (db: Database) => {
-  writeFileSync(dbPath, Buffer.from(db.export()));
+  writeFileSync(dbPath, Buffer.from(db.export()), { mode: FILE_PERMISSIONS });
 };
 
 const make = Effect.gen(function* () {
@@ -60,7 +70,41 @@ const make = Effect.gen(function* () {
       }),
   });
 
+  let batching = false;
+  let dirty = false;
+
+  const maybePersist = () => {
+    if (batching) {
+      dirty = true;
+      return;
+    }
+    persist(db);
+  };
+
   return MetadataStore.of({
+    beginBatch: Effect.fn("SqliteMetadataStore.beginBatch")(function* () {
+      yield* Effect.sync(() => {
+        batching = true;
+        dirty = false;
+      });
+    }),
+
+    endBatch: Effect.fn("SqliteMetadataStore.endBatch")(function* () {
+      batching = false;
+      if (dirty) {
+        yield* Effect.try({
+          try: () => {
+            persist(db);
+            dirty = false;
+          },
+          catch: (error) =>
+            new MetadataStoreError({
+              operation: "endBatch",
+              message: `Failed to persist batched changes: ${error}`,
+            }),
+        });
+      }
+    }),
     upsert: Effect.fn("SqliteMetadataStore.upsert")(function* (
       env: string,
       key: string
@@ -74,7 +118,7 @@ const make = Effect.gen(function* () {
                updated_at = datetime('now')`,
             [env, key]
           );
-          persist(db);
+          maybePersist();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -131,7 +175,7 @@ const make = Effect.gen(function* () {
       yield* Effect.try({
         try: () => {
           db.run("DELETE FROM secrets WHERE env = ? AND key = ?", [env, key]);
-          persist(db);
+          maybePersist();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -264,7 +308,7 @@ const make = Effect.gen(function* () {
                context = excluded.context`,
             [name, command, context]
           );
-          persist(db);
+          maybePersist();
         },
         catch: (error) =>
           new MetadataStoreError({
@@ -366,27 +410,32 @@ const make = Effect.gen(function* () {
     removeCommand: Effect.fn("SqliteMetadataStore.removeCommand")(function* (
       name: string
     ) {
-      yield* Effect.try({
+      const rowsModified = yield* Effect.try({
         try: () => {
           db.run("DELETE FROM commands WHERE name = ?", [name]);
-          const rowsModified = db.getRowsModified();
-          if (rowsModified === 0) {
-            throw new CommandNotFoundError({
-              name,
-              message: `Command not found: "${name}"`,
-            });
-          }
-          persist(db);
+          return db.getRowsModified();
         },
-        catch: (error) => {
-          if (error instanceof CommandNotFoundError) {
-            return error;
-          }
-          return new MetadataStoreError({
+        catch: (error) =>
+          new MetadataStoreError({
             operation: "removeCommand",
             message: `Failed to remove command "${name}": ${error}`,
-          });
-        },
+          }),
+      });
+
+      if (rowsModified === 0) {
+        return yield* new CommandNotFoundError({
+          name,
+          message: `Command not found: "${name}"`,
+        });
+      }
+
+      yield* Effect.try({
+        try: () => maybePersist(),
+        catch: (error) =>
+          new MetadataStoreError({
+            operation: "removeCommand",
+            message: `Failed to persist after removing command "${name}": ${error}`,
+          }),
       });
     }),
   });

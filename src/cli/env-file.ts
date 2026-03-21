@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
-import type { SecretNotFoundError } from "../errors.js";
+import { FileAccessError, type SecretNotFoundError } from "../errors.js";
 import { SecretStore } from "../services/secret-store.js";
 import { requireContext } from "./root.js";
 
@@ -66,7 +66,14 @@ export const envFileCommand = Command.make(
         );
       }
 
-      writeFileSync(output, `${lines.join("\n")}\n`, "utf-8");
+      yield* Effect.try({
+        try: () => writeFileSync(output, `${lines.join("\n")}\n`, "utf-8"),
+        catch: (error) =>
+          new FileAccessError({
+            path: output,
+            message: `Failed to write env file: ${error}`,
+          }),
+      });
       yield* Console.log(`📝 Written ${lines.length} secret(s) to ${output}`);
     })
 );
