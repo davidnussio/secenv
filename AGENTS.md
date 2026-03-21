@@ -125,3 +125,7 @@ Most formatting and common issues are automatically fixed by Biome. Run `bun x u
 ## Language
 
 Write code and comment in English
+
+## Testing
+
+Every time a new command or functionality has been added the e2e test file have to be updated

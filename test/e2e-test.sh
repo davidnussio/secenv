@@ -24,6 +24,7 @@ cleanup_secrets() {
   for key in redis.host redis.port redis.password smtp.user smtp.pass; do
     node "$CLI" -c "$CTX2" delete -y "$key" >/dev/null 2>&1 || true
   done
+  node "$CLI" -c "test.e2e-all" delete --all -y >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-echo" >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-multi" >/dev/null 2>&1 || true
 }
@@ -210,6 +211,33 @@ assert_exit "delete: get fails after delete" "1" "$ec"
 # Other secrets still intact
 out=$(run_ok -c "$CTX" get db.password)
 assert_eq "delete: others intact" "newpassword" "$out"
+
+# ─── 6b. DELETE --all ──────────────────────────────────────────────────────────
+echo ""
+echo "── 6b. DELETE --all ──"
+
+# Seed a temporary context with multiple secrets
+CTX_ALL="test.e2e-all"
+run_ok -c "$CTX_ALL" add one.key -v "v1" >/dev/null
+run_ok -c "$CTX_ALL" add two.key -v "v2" >/dev/null
+run_ok -c "$CTX_ALL" add three.key -v "v3" >/dev/null
+
+out=$(run_ok -c "$CTX_ALL" list)
+assert_contains "delete --all: seeded one.key" "one.key" "$out"
+assert_contains "delete --all: seeded two.key" "two.key" "$out"
+assert_contains "delete --all: seeded three.key" "three.key" "$out"
+
+# Delete all with --all -y (skip confirmation)
+out=$(run_ok -c "$CTX_ALL" delete --all -y)
+assert_contains "delete --all: removed count" "Removed 3" "$out"
+
+# Verify context is empty
+out=$(run_ok -c "$CTX_ALL" list || true)
+assert_contains "delete --all: context empty" "No secrets" "$out"
+
+# Delete --all on already empty context
+out=$(run_ok -c "$CTX_ALL" delete --all -y)
+assert_contains "delete --all: empty context" "No secrets" "$out"
 
 # ─── 7. RUN ──────────────────────────────────────────────────────────────────
 echo ""
