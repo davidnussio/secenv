@@ -207,6 +207,40 @@ Secrets are stored in the native OS credential store. The backend is selected au
 
 Metadata (key names, timestamps) is kept in a SQLite database at `~/.envsec/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
 
+## Security
+
+envsec is built around a simple principle: your secrets belong in your OS, not in dotfiles. Every design decision starts from that foundation.
+
+### How envsec protects your secrets
+
+**OS-native encryption, zero custom crypto.** Secret values are stored directly in macOS Keychain, GNOME Keyring / KDE Wallet, or Windows Credential Manager. envsec never invents its own encryption — it delegates to the battle-tested credential stores your operating system already provides, protected by your user session and (on macOS) the login keychain.
+
+**Secrets never touch disk as plaintext.** Values go straight from your terminal into the OS credential store. They are never written to config files, logs, or intermediate storage.
+
+**No secrets in terminal output.** The `list` and `search` commands display key names only — values are never printed. This keeps secrets out of scrollback buffers, screen recordings, and shoulder-surfing range.
+
+**Safe command execution.** The `run` command injects secrets as environment variables of the child process rather than interpolating them into the command string. This means secret values don't appear in `ps` output or shell history. If any referenced secret is missing, the command is blocked entirely — no partial execution with incomplete credentials.
+
+**Input validation and injection prevention.** Context names are validated against a strict allowlist (alphanumeric, dots, hyphens, underscores) with path traversal and prototype pollution checks. All SQLite queries use prepared statements with bind parameters, preventing SQL injection. PowerShell arguments on Windows are escaped to guard against command injection.
+
+**Restrictive file permissions.** The metadata directory (`~/.envsec/`) is created with `0700` permissions and the SQLite database with `0600`, limiting access to the owning user.
+
+### Known limitations and areas for improvement
+
+We believe in being upfront about what envsec does not yet cover. These are real trade-offs, not bugs — and understanding them helps you make informed decisions.
+
+**Metadata is visible.** The SQLite database at `~/.envsec/store.sqlite` stores key names, context names, and timestamps — never secret values, but enough to reveal *what* secrets exist. Saved command templates (with `{key}` placeholders) are also stored there. If metadata confidentiality matters to you, ensure your home directory is on an encrypted volume.
+
+**`env-file` exports are plaintext.** The `env-file` command writes secret values to a `.env` file on disk. This is inherently sensitive — treat the output file accordingly and never commit it to version control. Consider it a convenience bridge, not a storage mechanism.
+
+**Shell execution carries inherent risk.** The `run` command passes your command template through `/bin/sh` (or `cmd.exe` on Windows). If the template itself comes from untrusted input, shell injection is possible. Only run command templates you wrote or trust.
+
+**No cross-context access control.** Any process running as your OS user can read all secrets across all contexts. envsec relies on OS-level user isolation — it does not add its own authorization layer between contexts.
+
+**Linux headless environments.** On Linux, envsec depends on an active D-Bus session and a keyring daemon (e.g. `gnome-keyring-daemon`). In containers or headless servers without a graphical session, the keyring may be unavailable or may store secrets with weaker protection.
+
+**Encryption depends on your OS.** envsec adds no additional at-rest encryption beyond what the native credential store provides. On systems without full-disk encryption, an attacker with physical access could potentially extract secrets from the keychain. We recommend enabling full-disk encryption (FileVault, LUKS, BitLocker) for the strongest protection.
+
 ## License
 
 MIT
