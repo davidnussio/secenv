@@ -4,6 +4,7 @@ import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect, Layer } from "effect";
 import { addCommand } from "./cli/add.js";
+import { auditCommand } from "./cli/audit.js";
 import { cmdCommand } from "./cli/cmd.js";
 import { delCommand, deleteCommand } from "./cli/delete.js";
 import { envCommand } from "./cli/env.js";
@@ -36,6 +37,7 @@ const command = rootCommand.pipe(
     envFileCommand,
     loadCommand,
     cmdCommand,
+    auditCommand,
   ])
 );
 

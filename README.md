@@ -96,6 +96,13 @@ envsec -c myapp.dev add api.key -v "sk-abc123"
 
 # Omit --value for an interactive masked prompt
 envsec -c myapp.dev add api.key
+
+# Set an expiry duration with --expires (-e)
+envsec -c myapp.dev add api.key -v "sk-abc123" --expires 30d
+
+# Supported duration units: m (minutes), h (hours), d (days), w (weeks), mo (months), y (years)
+# Combinable: 1y6mo, 2w3d, 1d12h
+envsec -c myapp.dev add api.key -v "sk-abc123" -e 6mo
 ```
 
 ### Get a secret
@@ -235,6 +242,27 @@ envsec -c myapp.dev delete api.key
 # or use the alias
 envsec -c myapp.dev del api.key
 ```
+
+### Audit secrets for expiry
+
+```bash
+# Check for expired or expiring secrets in a context (default window: 30 days)
+envsec -c myapp.dev audit
+
+# Specify a custom window
+envsec -c myapp.dev audit --within 7d
+
+# Show only already-expired secrets
+envsec -c myapp.dev audit --within 0d
+
+# Audit across all contexts (omit --context)
+envsec audit
+
+# JSON output
+envsec -c myapp.dev audit --json
+```
+
+Secrets with an `--expires` duration set via `envsec add` are tracked in metadata. The `audit` command scans for secrets that are already expired or will expire within the specified window. The `get` and `list` commands also display expiry warnings inline.
 
 ## How it works
 

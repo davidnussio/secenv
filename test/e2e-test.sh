@@ -25,6 +25,7 @@ cleanup_secrets() {
     node "$CLI" -c "$CTX2" delete -y "$key" >/dev/null 2>&1 || true
   done
   node "$CLI" -c "test.e2e-all" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-expiry" delete --all -y >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-echo" >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-multi" >/dev/null 2>&1 || true
 }
@@ -405,7 +406,74 @@ fi
 run_ok --db "$CUSTOM_DB" -c "$CTX" delete -y db.custom >/dev/null || true
 ENVSEC_DB="$CUSTOM_DB2" run_ok -c "$CTX" delete -y db.envvar >/dev/null || true
 
-# ─── 13. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 13. SECRET EXPIRY & AUDIT ───────────────────────────────────────────────
+echo ""
+echo "── 13. SECRET EXPIRY & AUDIT ──"
+
+CTX_EXP="test.e2e-expiry"
+
+# Add a secret with --expires
+out=$(run_ok -c "$CTX_EXP" add exp.short -v "shortlived" --expires 1m)
+assert_contains "add --expires: stored" "stored" "$out"
+assert_contains "add --expires: expiry note" "expires:" "$out"
+
+# Add a secret with long expiry
+out=$(run_ok -c "$CTX_EXP" add exp.long -v "longlived" --expires 1y)
+assert_contains "add --expires long: stored" "stored" "$out"
+
+# Add a secret without expiry
+run_ok -c "$CTX_EXP" add exp.none -v "noexpiry" >/dev/null
+
+# List should show expiry info for secrets that have it
+out=$(run_ok -c "$CTX_EXP" list)
+assert_contains "list expiry: exp.short" "exp.short" "$out"
+assert_contains "list expiry: expires marker" "expires" "$out"
+
+# Get with JSON should include expires_at
+out=$(run_ok -c "$CTX_EXP" --json get exp.short)
+assert_contains "get json: expires_at field" '"expires_at"' "$out"
+
+out=$(run_ok -c "$CTX_EXP" --json get exp.none)
+assert_contains "get json: null expires_at" "null" "$out"
+
+# Audit within 30d — should find the 1m secret (expires within 30d)
+out=$(run_ok -c "$CTX_EXP" audit --within 30d)
+assert_contains "audit 30d: finds short" "exp.short" "$out"
+assert_not_contains "audit 30d: no long" "exp.long" "$out"
+
+# Audit within 2y — should find both expiring secrets
+out=$(run_ok -c "$CTX_EXP" audit --within 2y)
+assert_contains "audit 2y: finds short" "exp.short" "$out"
+assert_contains "audit 2y: finds long" "exp.long" "$out"
+
+# Audit with no context — all contexts
+out=$(run_ok audit --within 2y)
+assert_contains "audit all: finds expiry context" "$CTX_EXP" "$out"
+
+# Audit JSON output
+out=$(run_ok -c "$CTX_EXP" --json audit --within 2y)
+assert_contains "audit json: is array" "[" "$out"
+assert_contains "audit json: has key" '"key"' "$out"
+assert_contains "audit json: has expired field" '"expired"' "$out"
+
+# Audit with nothing expiring
+out=$(run_ok -c "$CTX_EXP" audit --within 0m)
+# 0m means only already-expired, and our 1m secret hasn't expired yet
+assert_contains "audit 0m: nothing expired" "No secrets" "$out"
+
+# Invalid duration
+ec=0
+out=$(run_all -c "$CTX_EXP" add exp.bad -v "x" --expires "abc") || ec=$?
+assert_exit "add: invalid duration fails" "1" "$ec"
+
+# Update expiry on existing secret
+out=$(run_ok -c "$CTX_EXP" add exp.short -v "updated" --expires 7d)
+assert_contains "add update expiry: stored" "stored" "$out"
+
+# Clean up expiry context
+run_ok -c "$CTX_EXP" delete --all -y >/dev/null || true
+
+# ─── 14. CLEANUP & VERIFY ────────────────────────────────────────────────────
 echo ""
 echo "── 13. CLEANUP ──"
 

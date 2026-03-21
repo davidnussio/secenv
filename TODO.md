@@ -68,9 +68,9 @@
 - [ ] Support for importing from other secret managers (e.g. `envsec import --from-doppler`, `--from-vault`)
 
 ### Secret Rotation & Expiry
-- [ ] `envsec set <key> --expires <duration>` — attach a TTL to a secret, warn or block when expired
-- [ ] `envsec audit` — list secrets that are expired, about to expire, or haven't been rotated in a configurable period
-- [ ] Store `expires_at` in metadata table for tracking
+- [x] `envsec set <key> --expires <duration>` — attach a TTL to a secret, warn or block when expired
+- [x] `envsec audit` — list secrets that are expired, about to expire, or haven't been rotated in a configurable period
+- [x] Store `expires_at` in metadata table for tracking
 
 ### Multi-Context Operations
 - [ ] `envsec copy -c source.ctx -t target.ctx [pattern]` — copy secrets between contexts (e.g. staging → production)

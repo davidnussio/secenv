@@ -90,3 +90,21 @@ export class FileAccessError extends Schema.TaggedError<FileAccessError>()(
     message: Schema.String,
   }
 ) {}
+
+export class ExpiredSecretError extends Schema.TaggedError<ExpiredSecretError>()(
+  "ExpiredSecretError",
+  {
+    key: Schema.String,
+    context: Schema.String,
+    expiredAt: Schema.String,
+    message: Schema.String,
+  }
+) {}
+
+export class InvalidDurationError extends Schema.TaggedError<InvalidDurationError>()(
+  "InvalidDurationError",
+  {
+    input: Schema.String,
+    message: Schema.String,
+  }
+) {}
