@@ -15,6 +15,7 @@ import { loadCommand } from "./cli/load.js";
 import { rootCommand } from "./cli/root.js";
 import { runCommand } from "./cli/run.js";
 import { searchCommand } from "./cli/search.js";
+import { shareCommand } from "./cli/share.js";
 import {
   DatabaseConfigDefault,
   DatabaseConfigFrom,
@@ -38,6 +39,7 @@ const command = rootCommand.pipe(
     loadCommand,
     cmdCommand,
     auditCommand,
+    shareCommand,
   ])
 );
 

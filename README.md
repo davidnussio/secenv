@@ -14,6 +14,7 @@ Secure environment secrets management using native OS credential stores.
 - Export secrets to `.env` files
 - Export secrets as shell environment variables (`eval $(envsec env)`)
 - Load secrets from `.env` files (with conflict detection)
+- Share secrets encrypted with GPG for team members
 
 ## Requirements
 
@@ -233,6 +234,21 @@ envsec cmd search kubectl -m
 # Delete a saved command
 envsec cmd delete deploy
 ```
+
+### Share secrets (GPG encrypted)
+
+```bash
+# Encrypt all secrets from a context for a team member
+envsec -c myapp.dev share --encrypt-to alice@example.com
+
+# Save encrypted output to a file
+envsec -c myapp.dev share --encrypt-to alice@example.com -o secrets.enc
+
+# Use JSON format inside the encrypted payload
+envsec -c myapp.dev --json share --encrypt-to alice@example.com -o secrets.enc
+```
+
+The recipient can decrypt with `gpg --decrypt secrets.enc` and pipe the result into `envsec load`. By default the encrypted payload uses `.env` format (`KEY="value"`); with `--json` it uses a structured JSON object. Requires GPG to be installed and the recipient's public key to be in your keyring.
 
 ### Delete a secret
 

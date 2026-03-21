@@ -77,7 +77,7 @@
 - [ ] `envsec diff -c ctx1 -t ctx2` — show which keys exist in one context but not the other, or have different values
 
 ### Team & Sharing
-- [ ] `envsec share -c <ctx> --encrypt-to <gpg-key>` — export a context encrypted for a specific team member
+- [x] `envsec share -c <ctx> --encrypt-to <gpg-key>` — export a context encrypted for a specific team member
 - [ ] `envsec sync` — sync secrets with a remote backend (e.g. S3 + KMS, Git-crypt repo) for team sharing
 
 ### Developer Experience

@@ -108,3 +108,11 @@ export class InvalidDurationError extends Schema.TaggedError<InvalidDurationErro
     message: Schema.String,
   }
 ) {}
+
+export class GPGEncryptionError extends Schema.TaggedError<GPGEncryptionError>()(
+  "GPGEncryptionError",
+  {
+    recipient: Schema.String,
+    message: Schema.String,
+  }
+) {}

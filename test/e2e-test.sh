@@ -473,7 +473,84 @@ assert_contains "add update expiry: stored" "stored" "$out"
 # Clean up expiry context
 run_ok -c "$CTX_EXP" delete --all -y >/dev/null || true
 
-# ─── 14. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 14. SHARE (GPG ENCRYPTION) ───────────────────────────────────────────────
+echo ""
+echo "── 14. SHARE ──"
+
+# Check if gpg is available
+if command -v gpg &>/dev/null; then
+  # Generate a temporary GPG key for testing
+  GPG_HOME="$TMPDIR_TEST/gnupg"
+  mkdir -p "$GPG_HOME"
+  chmod 700 "$GPG_HOME"
+
+  cat > "$GPG_HOME/keygen-params" << 'GPGEOF'
+%no-protection
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Subkey-Length: 2048
+Name-Real: envsec test
+Name-Email: envsec-test@localhost
+Expire-Date: 0
+%commit
+GPGEOF
+
+  GNUPGHOME="$GPG_HOME" gpg --batch --gen-key "$GPG_HOME/keygen-params" 2>/dev/null
+
+  # Seed secrets for share test
+  run_ok -c "$CTX" add db.password -v "sharepass123" >/dev/null
+  run_ok -c "$CTX" add api.token -v "tok_share_456" >/dev/null
+
+  # Share to stdout (default .env format)
+  out=$(GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" share --encrypt-to envsec-test@localhost)
+  assert_contains "share: PGP header" "BEGIN PGP MESSAGE" "$out"
+  assert_contains "share: PGP footer" "END PGP MESSAGE" "$out"
+
+  # Decrypt and verify content
+  decrypted=$(echo "$out" | GNUPGHOME="$GPG_HOME" gpg --batch --decrypt 2>/dev/null)
+  assert_contains "share: decrypted has DB_PASSWORD" 'DB_PASSWORD=' "$decrypted"
+  assert_contains "share: decrypted has API_TOKEN" 'API_TOKEN=' "$decrypted"
+
+  # Share to file
+  SHARE_OUT="$TMPDIR_TEST/shared.enc"
+  GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" share --encrypt-to envsec-test@localhost -o "$SHARE_OUT" >/dev/null
+  if [[ -f "$SHARE_OUT" ]]; then
+    green "  ✓ share -o: file created"; ((PASS++))
+  else
+    red "  ✗ share -o: file not created"; ((FAIL++))
+  fi
+
+  file_content=$(cat "$SHARE_OUT")
+  assert_contains "share -o: PGP header in file" "BEGIN PGP MESSAGE" "$file_content"
+
+  # Decrypt file and verify
+  decrypted_file=$(GNUPGHOME="$GPG_HOME" gpg --batch --decrypt "$SHARE_OUT" 2>/dev/null)
+  assert_contains "share -o: decrypted file has DB_PASSWORD" 'DB_PASSWORD=' "$decrypted_file"
+
+  # Share with --json format
+  out=$(GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" --json share --encrypt-to envsec-test@localhost)
+  decrypted_json=$(echo "$out" | GNUPGHOME="$GPG_HOME" gpg --batch --decrypt 2>/dev/null)
+  assert_contains "share --json: has context" '"context"' "$decrypted_json"
+  assert_contains "share --json: has secrets" '"secrets"' "$decrypted_json"
+
+  # Share empty context
+  ec=0
+  out=$(GNUPGHOME="$GPG_HOME" run_all -c "nonexistent.ctx.e2e" share --encrypt-to envsec-test@localhost 2>&1) || ec=$?
+  assert_contains "share: empty context message" "No secrets" "$out"
+
+  # Share with invalid GPG key
+  ec=0
+  out=$(GNUPGHOME="$GPG_HOME" run_all -c "$CTX" share --encrypt-to nonexistent-key@invalid 2>&1) || ec=$?
+  assert_exit "share: invalid GPG key fails" "1" "$ec"
+
+  # Clean up GPG home
+  rm -rf "$GPG_HOME"
+else
+  echo "  ⚠ gpg not found — skipping share tests"
+fi
+
+# ─── 15. CLEANUP & VERIFY ────────────────────────────────────────────────────
 echo ""
 echo "── 13. CLEANUP ──"
 
