@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { Features } from "@/components/features";
 import { Footer } from "@/components/footer";
 import { Hero } from "@/components/hero";
@@ -33,10 +34,13 @@ const jsonLd = {
 export default function Home() {
   return (
     <>
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <Script
+        id="json-ld"
+        strategy="afterInteractive"
         type="application/ld+json"
-      />
+      >
+        {JSON.stringify(jsonLd)}
+      </Script>
       <Navbar />
       <main className="px-6 py-12 md:px-12">
         <Hero />
