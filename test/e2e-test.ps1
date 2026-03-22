@@ -33,7 +33,7 @@ function Assert-Eq {
 
 function Assert-Contains {
     param([string]$Name, [string]$Needle, [string]$Haystack)
-    if ($Haystack -like "*$Needle*") {
+    if ($Haystack.Contains($Needle)) {
         Green $Name; $script:PASS++
     } else {
         Red $Name; Red "    expected to contain: '$Needle'"; Red "    got: '$Haystack'"; $script:FAIL++
@@ -42,7 +42,7 @@ function Assert-Contains {
 
 function Assert-NotContains {
     param([string]$Name, [string]$Needle, [string]$Haystack)
-    if ($Haystack -notlike "*$Needle*") {
+    if (-not $Haystack.Contains($Needle)) {
         Green $Name; $script:PASS++
     } else {
         Red $Name; Red "    should NOT contain: '$Needle'"; $script:FAIL++
@@ -59,15 +59,29 @@ function Assert-ExitCode {
 }
 
 function Run-Ok {
-    param([string[]]$Args)
-    $out = & node $CLI @Args 2>$null
-    return ($out -join "`n")
+    param([string[]]$CmdArgs)
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $out = & node $CLI @CmdArgs 2>$stderrFile
+        return ($out -join "`n")
+    } finally {
+        Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Run-All {
-    param([string[]]$Args)
-    $out = & node $CLI @Args 2>&1
-    return ($out -join "`n")
+    param([string[]]$CmdArgs)
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $stdout = & node $CLI @CmdArgs 2>$stderrFile
+        $stderr = Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue
+        $combined = @()
+        if ($stdout) { $combined += $stdout }
+        if ($stderr) { $combined += $stderr }
+        return ($combined -join "`n")
+    } finally {
+        Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Cleanup-Secrets {
