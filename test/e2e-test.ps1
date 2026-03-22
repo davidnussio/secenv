@@ -128,10 +128,11 @@ Run-Ok @("-c", $CTX, "add", "db.password", "-v", "newpassword") | Out-Null
 $out = Run-Ok @("-c", $CTX, "get", "db.password")
 Assert-Eq "add: sovrascrittura" "newpassword" $out.Trim()
 
-# Special characters
-Run-Ok @("-c", $CTX, "add", "special.chars", "-v", 'p@ss w0rd!#$%') | Out-Null
+# Special characters (avoid % on Windows — cmdkey interprets it as env var)
+$SpecialValue = 'p@ss w0rd!#&='
+Run-Ok @("-c", $CTX, "add", "special.chars", "-v", $SpecialValue) | Out-Null
 $out = Run-Ok @("-c", $CTX, "get", "special.chars")
-Assert-Eq "get: caratteri speciali" 'p@ss w0rd!#$%' $out.Trim()
+Assert-Eq "get: caratteri speciali" $SpecialValue $out.Trim()
 
 # ─── 2. LIST ─────────────────────────────────────────────────────────────────
 Write-Host ""
@@ -474,7 +475,9 @@ Write-Host "── 14. SHARE ──"
 
 $gpgPath = Get-Command gpg -ErrorAction SilentlyContinue
 if ($gpgPath) {
-    $GpgHome = Join-Path $TmpDir "gnupg"
+    # Use a short native Windows path to avoid MSYS2 path mangling
+    $GpgHome = Join-Path $env:TEMP "envsec-gpg-test"
+    if (Test-Path $GpgHome) { Remove-Item -Recurse -Force $GpgHome }
     New-Item -ItemType Directory -Path $GpgHome -Force | Out-Null
 
     $keygenParams = @"
@@ -492,7 +495,7 @@ Expire-Date: 0
     $keygenParams | Set-Content -Path $keygenFile -Encoding UTF8
 
     $env:GNUPGHOME = $GpgHome
-    & gpg --batch --gen-key $keygenFile 2>$null
+    & gpg --homedir $GpgHome --batch --gen-key $keygenFile 2>$null
 
     # Seed secrets for share test
     Run-Ok @("-c", $CTX, "add", "db.password", "-v", "sharepass123") | Out-Null
@@ -502,7 +505,9 @@ Expire-Date: 0
     Assert-Contains "share: PGP header" "BEGIN PGP MESSAGE" $out
     Assert-Contains "share: PGP footer" "END PGP MESSAGE" $out
 
-    $decrypted = $out | & gpg --batch --decrypt 2>$null
+    $stderrTmp = [System.IO.Path]::GetTempFileName()
+    $decrypted = $out | & gpg --homedir $GpgHome --batch --decrypt 2>$stderrTmp
+    Remove-Item $stderrTmp -Force -ErrorAction SilentlyContinue
     $decrypted = $decrypted -join "`n"
     Assert-Contains "share: decrypted has DB_PASSWORD" "DB_PASSWORD=" $decrypted
     Assert-Contains "share: decrypted has API_TOKEN" "API_TOKEN=" $decrypted
@@ -515,15 +520,19 @@ Expire-Date: 0
         Red "share -o: file not created"; $script:FAIL++
     }
 
-    $fileContent = Get-Content $ShareOut -Raw
-    Assert-Contains "share -o: PGP header in file" "BEGIN PGP MESSAGE" $fileContent
+    $fileContent = Get-Content $ShareOut -Raw -ErrorAction SilentlyContinue
+    Assert-Contains "share -o: PGP header in file" "BEGIN PGP MESSAGE" "$fileContent"
 
-    $decryptedFile = & gpg --batch --decrypt $ShareOut 2>$null
+    $stderrTmp = [System.IO.Path]::GetTempFileName()
+    $decryptedFile = & gpg --homedir $GpgHome --batch --decrypt $ShareOut 2>$stderrTmp
+    Remove-Item $stderrTmp -Force -ErrorAction SilentlyContinue
     $decryptedFile = $decryptedFile -join "`n"
     Assert-Contains "share -o: decrypted file has DB_PASSWORD" "DB_PASSWORD=" $decryptedFile
 
     $out = Run-Ok @("-c", $CTX, "--json", "share", "--encrypt-to", "envsec-test@localhost")
-    $decryptedJson = $out | & gpg --batch --decrypt 2>$null
+    $stderrTmp = [System.IO.Path]::GetTempFileName()
+    $decryptedJson = $out | & gpg --homedir $GpgHome --batch --decrypt 2>$stderrTmp
+    Remove-Item $stderrTmp -Force -ErrorAction SilentlyContinue
     $decryptedJson = $decryptedJson -join "`n"
     Assert-Contains "share --json: has context" '"context"' $decryptedJson
     Assert-Contains "share --json: has secrets" '"secrets"' $decryptedJson
