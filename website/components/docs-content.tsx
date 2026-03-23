@@ -208,6 +208,10 @@ envsec cmd list
 # Run a saved command
 envsec cmd run deploy
 
+# Run quietly (suppress informational output)
+envsec cmd run deploy --quiet
+envsec cmd run deploy -q
+
 # Override context at execution time
 envsec cmd run deploy --override-context myapp.prod
 

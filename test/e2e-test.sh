@@ -319,6 +319,15 @@ assert_contains "cmd list: test-echo" "test-echo" "$out"
 out=$(run_ok cmd run test-echo)
 assert_contains "cmd run: executed" "newpassword" "$out"
 
+# cmd run --quiet: suppress informational output
+out=$(run_ok cmd run -q test-echo)
+assert_contains "cmd run -q: executed" "newpassword" "$out"
+assert_not_contains "cmd run -q: no resolved msg" "Resolved" "$out"
+
+out=$(run_ok cmd run --quiet test-echo)
+assert_contains "cmd run --quiet: executed" "newpassword" "$out"
+assert_not_contains "cmd run --quiet: no resolved msg" "Resolved" "$out"
+
 out=$(run_ok cmd search "test*")
 assert_contains "cmd search: test-echo" "test-echo" "$out"
 

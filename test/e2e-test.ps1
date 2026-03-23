@@ -331,6 +331,15 @@ Assert-Contains "cmd list: test-echo" "test-echo" $out
 $out = Run-Ok @("cmd", "run", "test-echo")
 Assert-Contains "cmd run: executed" "newpassword" $out
 
+# cmd run --quiet: suppress informational output
+$out = Run-Ok @("cmd", "run", "-q", "test-echo")
+Assert-Contains "cmd run -q: executed" "newpassword" $out
+Assert-NotContains "cmd run -q: no resolved msg" "Resolved" $out
+
+$out = Run-Ok @("cmd", "run", "--quiet", "test-echo")
+Assert-Contains "cmd run --quiet: executed" "newpassword" $out
+Assert-NotContains "cmd run --quiet: no resolved msg" "Resolved" $out
+
 $out = Run-Ok @("cmd", "search", "test*")
 Assert-Contains "cmd search: test-echo" "test-echo" $out
 

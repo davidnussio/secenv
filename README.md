@@ -234,6 +234,10 @@ envsec cmd list
 # Run a saved command (uses the context it was saved with)
 envsec cmd run deploy
 
+# Run quietly (suppress informational output like "Resolved N secret(s)")
+envsec cmd run deploy --quiet
+envsec cmd run deploy -q
+
 # Override the context at execution time
 envsec cmd run deploy --override-context myapp.prod
 envsec cmd run deploy -o myapp.prod
