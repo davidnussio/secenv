@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const INSTALL_OPTIONS = [
+  { label: "brew", command: "brew install davidnussio/homebrew-tap/envsec" },
   { label: "npm", command: "npm install -g envsec" },
   { label: "npx", command: "npx envsec" },
   { label: "mise", command: "mise use -g npm:envsec" },

@@ -53,17 +53,29 @@ No extra dependencies. Uses the built-in Windows Credential Manager via `cmdkey`
 
 ## Installation
 
-```bash
-mise use -g npm:envsec
+### Homebrew (macOS / Linux)
 
+```bash
+brew tap davidnussio/homebrew-tap
+brew install envsec
 ```
+
+### npm
 
 ```bash
 npm install -g envsec
 ```
 
+### npx (no install)
+
 ```bash
 npx envsec
+```
+
+### mise
+
+```bash
+mise use -g npm:envsec
 ```
 
 ## Usage

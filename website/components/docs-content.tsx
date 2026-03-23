@@ -43,11 +43,16 @@ export function DocsContent() {
       {/* Getting Started */}
       <Section id="installation">
         <H2>Installation</H2>
-        <P>envsec requires Node.js 18 or later. Install globally via npm:</P>
+        <H3>Homebrew (macOS / Linux)</H3>
+        <CodeBlock
+          code={"brew tap davidnussio/homebrew-tap\nbrew install envsec"}
+        />
+        <H3>npm</H3>
+        <P>Requires Node.js 18 or later.</P>
         <CodeBlock code="npm install -g envsec" />
         <P>Or run directly without installing:</P>
         <CodeBlock code="npx envsec" />
-        <P>If you use mise as a version manager:</P>
+        <H3>mise</H3>
         <CodeBlock code="mise use -g npm:envsec" />
       </Section>
 
