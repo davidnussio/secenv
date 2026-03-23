@@ -80,14 +80,16 @@ export function TerminalDemo() {
             {line.prompt ? (
               <>
                 <span className="mr-2 shrink-0 text-emerald-400">$</span>
-                <span className="min-w-0 break-words text-zinc-200">
+                <span className="min-w-0 break-words text-left text-zinc-200">
                   {line.text}
                 </span>
               </>
             ) : (
               <>
                 <span className="invisible mr-2 w-[ch] shrink-0">$</span>
-                <span className="min-w-0 text-zinc-400">{line.text}</span>
+                <span className="min-w-0 text-left text-zinc-400">
+                  {line.text}
+                </span>
               </>
             )}
           </div>
