@@ -4,6 +4,7 @@ import {
   MetadataStoreConfig,
   SqliteMetadataStore,
 } from "../implementations/sqlite-metadata-store.js";
+import { DatabaseConfigFrom } from "../services/database-config.js";
 import { KeychainAccess } from "../services/keychain-access.js";
 import { SecretStore } from "../services/secret-store.js";
 
@@ -38,8 +39,12 @@ const KeychainAccessTest = Layer.succeed(KeychainAccess, {
 const ConfigTest = Layer.succeed(MetadataStoreConfig, {
   dbPath: `${process.cwd()}/db/test.db`,
 });
-const SqliteMetadataStoreTest = SqliteMetadataStore.pipe(
-  Layer.provide(ConfigTest)
+
+const DatabaseConfigTest = DatabaseConfigFrom(`${process.cwd()}/db/test.db`);
+
+export const SqliteMetadataStoreTest = SqliteMetadataStore.pipe(
+  Layer.provide(ConfigTest),
+  Layer.provide(DatabaseConfigTest)
 );
 
 export const SecretStoreTest = SecretStore.Default.pipe(

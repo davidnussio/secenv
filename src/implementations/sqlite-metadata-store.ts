@@ -1,4 +1,3 @@
-import { Context, Effect, Layer } from "effect";
 import {
   chmodSync,
   existsSync,
@@ -8,6 +7,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { Context, Effect, Layer } from "effect";
 import initSqlJs, { type Database } from "sql.js";
 import {
   CommandNotFoundError,

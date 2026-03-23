@@ -1,8 +1,8 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect, Layer } from "effect";
-import { createRequire } from "node:module";
 import { allCommands } from "./cli/index.js";
 import {
   DatabaseConfigDefault,

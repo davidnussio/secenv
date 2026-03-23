@@ -1,5 +1,0 @@
-[test]
-coverage = true
-preload = [
-  "./src/tests/setup-test-db.ts",
-]

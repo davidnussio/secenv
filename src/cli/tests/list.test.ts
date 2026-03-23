@@ -1,5 +1,4 @@
-import { expect } from "bun:test";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 import { buildTestCli } from "../../tests/run-cli-test.js";
 import { SecretStoreTest } from "../../tests/secret-store-test-layer.js";
 
