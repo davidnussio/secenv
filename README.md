@@ -2,6 +2,12 @@
 
 Secure environment secrets management using native OS credential stores.
 
+## Demo
+
+<!-- https://github.com/user-attachments/assets/ce744e1f-7a6f-4571-8bdc-9dc63cf42ed8 -->
+
+![Image](https://github.com/user-attachments/assets/533f3cf9-d5af-42d0-b517-bc8b05835093)
+
 ## Features
 
 - Store secrets in your OS native credential store (not plain text files)
