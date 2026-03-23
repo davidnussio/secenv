@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "241513d240f805e1651f86311089b521592cdf298eafaa3ba5ccc089ea0c97c6"
     },
+    "effect-ts": {
+      "source": "joelhooks/effectts-skills",
+      "sourceType": "github",
+      "computedHash": "648c1dd2182a78d997502279000a58e2471afa48df71aa83d07497c1ae39404a"
+    },
     "remotion-best-practices": {
       "source": "remotion-dev/skills",
       "sourceType": "github",

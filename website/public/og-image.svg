@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <rect width="1200" height="630" fill="url(#grad)" opacity="0.3"/>
+  <defs>
+    <radialGradient id="grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M560 200L520 220v28c0 24.3 17 46.9 40 52 23-5.1 40-27.7 40-52v-28L560 200z" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M548 232l12 12 20-24" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="340" text-anchor="middle" fill="white" font-family="monospace" font-size="64" font-weight="bold">envsec</text>
+  <text x="600" y="400" text-anchor="middle" fill="#a1a1aa" font-family="sans-serif" font-size="28">Secrets that never touch disk</text>
+  <text x="600" y="460" text-anchor="middle" fill="#52525b" font-family="monospace" font-size="20">macOS Keychain · Linux Secret Service · Windows Credential Manager</text>
+</svg>

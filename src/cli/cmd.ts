@@ -18,16 +18,24 @@ const cmdRunContextOverride = Options.text("override-context").pipe(
   Options.optional
 );
 
+const cmdRunQuiet = Options.boolean("quiet").pipe(
+  Options.withAlias("q"),
+  Options.withDescription(
+    "Suppress informational output, print only command output"
+  ),
+  Options.withDefault(false)
+);
+
 const cmdRunCommand = Command.make(
   "run",
-  { name: cmdRunName, context: cmdRunContextOverride },
-  ({ name, context }) =>
+  { name: cmdRunName, context: cmdRunContextOverride, quiet: cmdRunQuiet },
+  ({ name, context, quiet }) =>
     Effect.gen(function* () {
       const saved = yield* SecretStore.getCommand(name);
       const rawCtx = Option.isSome(context) ? context.value : saved.context;
       const ctx = yield* Schema.decode(ContextName)(rawCtx);
 
-      const resolved = yield* resolveCommand(saved.command, ctx);
+      const resolved = yield* resolveCommand(saved.command, ctx, { quiet });
 
       yield* Effect.try({
         try: () => {

@@ -7,6 +7,7 @@ import type {
 
 export interface SecretMetadata {
   readonly created_at: string;
+  readonly expires_at: string | null;
   readonly key: string;
   readonly updated_at: string;
 }
@@ -16,7 +17,8 @@ export class MetadataStore extends Context.Tag("MetadataStore")<
   {
     readonly upsert: (
       env: string,
-      key: string
+      key: string,
+      expiresAt?: string | null
     ) => Effect.Effect<void, MetadataStoreError>;
     readonly get: (
       env: string,
@@ -36,7 +38,7 @@ export class MetadataStore extends Context.Tag("MetadataStore")<
     readonly list: (
       env: string
     ) => Effect.Effect<
-      Array<{ key: string; updated_at: string }>,
+      Array<{ key: string; updated_at: string; expires_at: string | null }>,
       MetadataStoreError
     >;
     readonly searchContexts: (
@@ -73,6 +75,16 @@ export class MetadataStore extends Context.Tag("MetadataStore")<
     ) => Effect.Effect<void, CommandNotFoundError | MetadataStoreError>;
     readonly beginBatch: () => Effect.Effect<void, MetadataStoreError>;
     readonly endBatch: () => Effect.Effect<void, MetadataStoreError>;
+    readonly listExpiring: (
+      env: string,
+      withinMs: number
+    ) => Effect.Effect<SecretMetadata[], MetadataStoreError>;
+    readonly listAllExpiring: (
+      withinMs: number
+    ) => Effect.Effect<
+      Array<SecretMetadata & { env: string }>,
+      MetadataStoreError
+    >;
   }
 >() {}
 

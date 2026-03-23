@@ -6,8 +6,8 @@ import { KeychainAccess } from "../services/keychain-access.js";
 /**
  * Windows implementation using PowerShell + Windows Credential Manager.
  *
- * Uses the built-in `cmdkey` for basic operations and PowerShell's
- * `System.Net.NetworkCredential` / `CredentialManager` for read/write.
+ * Uses cmdkey with proper double-quote escaping for set/remove, and P/Invoke
+ * CredReadW for reading passwords back (cmdkey cannot read passwords).
  *
  * No extra dependencies required — uses only built-in Windows APIs via PowerShell.
  *
@@ -67,6 +67,20 @@ const escapePS = (s: string): string =>
     .replaceAll('"', '`"')
     .replaceAll("\0", "");
 
+/**
+ * Escape a string for use inside cmdkey double-quoted parameters.
+ * cmdkey is a cmd.exe tool, so we escape cmd metacharacters with ^
+ * and wrap the value in double quotes to handle spaces.
+ */
+const escapeCmdkey = (s: string): string =>
+  s
+    .replaceAll("^", "^^")
+    .replaceAll('"', '^"')
+    .replaceAll("&", "^&")
+    .replaceAll("|", "^|")
+    .replaceAll("<", "^<")
+    .replaceAll(">", "^>");
+
 const targetName = (service: string, account: string) =>
   `envsec:${service}/${account}`;
 
@@ -76,12 +90,12 @@ const make = KeychainAccess.of({
     account: string,
     password: string
   ) {
-    const target = escapePS(targetName(service, account));
-    const user = escapePS(account);
-    const pass = escapePS(password);
+    const target = escapeCmdkey(targetName(service, account));
+    const user = escapeCmdkey(account);
+    const pass = escapeCmdkey(password);
 
-    // Use cmdkey for simplicity — it's built-in and handles generic credentials
-    const script = `cmdkey /generic:'${target}' /user:'${user}' /pass:'${pass}'`;
+    // Use cmdkey with double quotes to handle spaces and special characters
+    const script = `cmd /c 'cmdkey /generic:"${target}" /user:"${user}" /pass:"${pass}"'`;
 
     const result = yield* runPowerShell(script);
 
@@ -156,8 +170,10 @@ const make = KeychainAccess.of({
     service: string,
     account: string
   ) {
-    const target = escapePS(targetName(service, account));
-    const script = `cmdkey /delete:'${target}'`;
+    const target = escapeCmdkey(targetName(service, account));
+
+    // Use cmdkey with double quotes for consistency
+    const script = `cmd /c 'cmdkey /delete:"${target}"'`;
 
     const result = yield* runPowerShell(script);
 

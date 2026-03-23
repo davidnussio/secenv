@@ -2,6 +2,12 @@
 
 Secure environment secrets management using native OS credential stores.
 
+## Demo
+
+<!-- https://github.com/user-attachments/assets/ce744e1f-7a6f-4571-8bdc-9dc63cf42ed8 -->
+
+![Image](https://github.com/user-attachments/assets/533f3cf9-d5af-42d0-b517-bc8b05835093)
+
 ## Features
 
 - Store secrets in your OS native credential store (not plain text files)
@@ -12,7 +18,9 @@ Secure environment secrets management using native OS credential stores.
 - Run commands with secret interpolation
 - Save and rerun commands with `cmd` (search, list, run, delete)
 - Export secrets to `.env` files
+- Export secrets as shell environment variables (`eval $(envsec env)`)
 - Load secrets from `.env` files (with conflict detection)
+- Share secrets encrypted with GPG for team members
 
 ## Requirements
 
@@ -45,29 +53,50 @@ No extra dependencies. Uses the built-in Windows Credential Manager via `cmdkey`
 
 ## Installation
 
-```bash
-mise use -g npm:envsec
+### Homebrew (macOS / Linux)
 
+```bash
+brew tap davidnussio/homebrew-tap
+brew install envsec
 ```
+
+### npm
 
 ```bash
 npm install -g envsec
 ```
 
+### npx (no install)
+
 ```bash
 npx envsec
 ```
 
-The package also provides `esec` as a shorter alias:
+### mise
 
 ```bash
-esec -c myapp.dev list
+mise use -g npm:envsec
 ```
 
 ## Usage
 
 Most commands require a context specified with `--context` (or `-c`).
 A context is a free-form label for grouping secrets — e.g. `myapp.dev`, `stripe-api.prod`, `work.staging`.
+
+### Custom database path
+
+By default, metadata is stored at `~/.envsec/store.sqlite`. You can override this with `--db` or the `ENVSEC_DB` environment variable:
+
+```bash
+# Use a project-local database
+envsec --db ./local-store.sqlite -c myapp.dev list
+
+# Or via environment variable
+export ENVSEC_DB=/shared/team/envsec.sqlite
+envsec -c myapp.dev list
+```
+
+The `--db` flag takes precedence over `ENVSEC_DB`. Use cases include per-project databases, team-shared databases on network drives, and CI/CD with ephemeral storage.
 
 ### Add a secret
 
@@ -80,12 +109,23 @@ envsec -c myapp.dev add api.key -v "sk-abc123"
 
 # Omit --value for an interactive masked prompt
 envsec -c myapp.dev add api.key
+
+# Set an expiry duration with --expires (-e)
+envsec -c myapp.dev add api.key -v "sk-abc123" --expires 30d
+
+# Supported duration units: m (minutes), h (hours), d (days), w (weeks), mo (months), y (years)
+# Combinable: 1y6mo, 2w3d, 1d12h
+envsec -c myapp.dev add api.key -v "sk-abc123" -e 6mo
 ```
 
 ### Get a secret
 
 ```bash
 envsec -c myapp.dev get api.key
+
+# Print only the raw value (no warnings or extra output)
+envsec -c myapp.dev get api.key --quiet
+envsec -c myapp.dev get api.key -q
 ```
 
 ### List all secrets in a context
@@ -122,6 +162,25 @@ envsec -c myapp.dev env-file --output .env.local
 ```
 
 Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
+
+### Export secrets as environment variables
+
+```bash
+# Output export statements for eval (bash/zsh)
+eval $(envsec -c myapp.dev env)
+
+# Specify target shell syntax
+envsec -c myapp.dev env --shell fish
+envsec -c myapp.dev env --shell powershell
+
+# Output unset commands to clean up exported variables
+eval $(envsec -c myapp.dev env --unset)
+
+# Combine shell and unset
+envsec -c myapp.dev env --unset --shell fish
+```
+
+Supported shells: `bash` (default), `zsh`, `fish`, `powershell`. Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`). Output goes to stdout so it can be piped to `eval` or sourced directly — no file is written to disk.
 
 ### Load secrets from a .env file
 
@@ -175,6 +234,10 @@ envsec cmd list
 # Run a saved command (uses the context it was saved with)
 envsec cmd run deploy
 
+# Run quietly (suppress informational output like "Resolved N secret(s)")
+envsec cmd run deploy --quiet
+envsec cmd run deploy -q
+
 # Override the context at execution time
 envsec cmd run deploy --override-context myapp.prod
 envsec cmd run deploy -o myapp.prod
@@ -192,6 +255,21 @@ envsec cmd search kubectl -m
 envsec cmd delete deploy
 ```
 
+### Share secrets (GPG encrypted)
+
+```bash
+# Encrypt all secrets from a context for a team member
+envsec -c myapp.dev share --encrypt-to alice@example.com
+
+# Save encrypted output to a file
+envsec -c myapp.dev share --encrypt-to alice@example.com -o secrets.enc
+
+# Use JSON format inside the encrypted payload
+envsec -c myapp.dev --json share --encrypt-to alice@example.com -o secrets.enc
+```
+
+The recipient can decrypt with `gpg --decrypt secrets.enc` and pipe the result into `envsec load`. By default the encrypted payload uses `.env` format (`KEY="value"`); with `--json` it uses a structured JSON object. Requires GPG to be installed and the recipient's public key to be in your keyring.
+
 ### Delete a secret
 
 ```bash
@@ -199,6 +277,42 @@ envsec -c myapp.dev delete api.key
 
 # or use the alias
 envsec -c myapp.dev del api.key
+```
+
+### Audit secrets for expiry
+
+```bash
+# Check for expired or expiring secrets in a context (default window: 30 days)
+envsec -c myapp.dev audit
+
+# Specify a custom window
+envsec -c myapp.dev audit --within 7d
+
+# Show only already-expired secrets
+envsec -c myapp.dev audit --within 0d
+
+# Audit across all contexts (omit --context)
+envsec audit
+
+# JSON output
+envsec -c myapp.dev audit --json
+```
+
+Secrets with an `--expires` duration set via `envsec add` are tracked in metadata. The `audit` command scans for secrets that are already expired or will expire within the specified window. The `get` and `list` commands also display expiry warnings inline.
+
+### Shell completions
+
+envsec supports tab completion for bash, zsh, fish, and sh.
+
+```bash
+# Bash (add to ~/.bashrc)
+eval "$(envsec --completions bash)"
+
+# Zsh (add to ~/.zshrc)
+eval "$(envsec --completions zsh)"
+
+# Fish (add to ~/.config/fish/config.fish)
+envsec --completions fish | source
 ```
 
 ## How it works
@@ -211,7 +325,7 @@ Secrets are stored in the native OS credential store. The backend is selected au
 | Linux   | Secret Service API (D-Bus)     | `secret-tool` (libsecret)           |
 | Windows | Credential Manager             | `cmdkey` + PowerShell (advapi32)    |
 
-Metadata (key names, timestamps) is kept in a SQLite database at `~/.envsec/store.sqlite`. Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
+Metadata (key names, timestamps) is kept in a SQLite database at `~/.envsec/store.sqlite` (configurable via `--db` or `ENVSEC_DB`). Keys must contain at least one dot separator (e.g., `service.account`) which maps to the credential store's service/account structure.
 
 ## Security
 
@@ -246,6 +360,23 @@ We believe in being upfront about what envsec does not yet cover. These are real
 **Linux headless environments.** On Linux, envsec depends on an active D-Bus session and a keyring daemon (e.g. `gnome-keyring-daemon`). In containers or headless servers without a graphical session, the keyring may be unavailable or may store secrets with weaker protection.
 
 **Encryption depends on your OS.** envsec adds no additional at-rest encryption beyond what the native credential store provides. On systems without full-disk encryption, an attacker with physical access could potentially extract secrets from the keychain. We recommend enabling full-disk encryption (FileVault, LUKS, BitLocker) for the strongest protection.
+
+## Testing
+
+End-to-end integration tests cover the full CLI lifecycle (add, get, list, search, env-file, load, delete, run, cmd, audit, share).
+
+```bash
+# Build first
+pnpm run build
+
+# macOS / Linux
+bash test/e2e-test.sh
+
+# Windows (PowerShell)
+pwsh test/e2e-test.ps1
+```
+
+CI runs automatically on push/PR to `main` via GitHub Actions, executing `e2e-test.sh` on macOS and Ubuntu, and `e2e-test.ps1` on Windows.
 
 ## License
 

@@ -25,6 +25,7 @@ cleanup_secrets() {
     node "$CLI" -c "$CTX2" delete -y "$key" >/dev/null 2>&1 || true
   done
   node "$CLI" -c "test.e2e-all" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-expiry" delete --all -y >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-echo" >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-multi" >/dev/null 2>&1 || true
 }
@@ -110,6 +111,16 @@ run_ok -c "$CTX" add special.chars -v 'p@ss w0rd!#$%' >/dev/null
 out=$(run_ok -c "$CTX" get special.chars)
 assert_eq "get: caratteri speciali" 'p@ss w0rd!#$%' "$out"
 
+# ─── 1b. GET --quiet ──────────────────────────────────────────────────────────
+echo ""
+echo "── 1b. GET --quiet ──"
+
+out=$(run_ok -c "$CTX" get -q db.password)
+assert_eq "get -q: only value" "newpassword" "$out"
+
+out=$(run_ok -c "$CTX" get --quiet api.token)
+assert_eq "get --quiet: only value" "tok_abc_999" "$out"
+
 # ─── 2. LIST ─────────────────────────────────────────────────────────────────
 echo ""
 echo "── 2. LIST ──"
@@ -118,6 +129,7 @@ out=$(run_ok -c "$CTX" list)
 assert_contains "list: db.password" "db.password" "$out"
 assert_contains "list: api.token" "api.token" "$out"
 assert_contains "list: special.chars" "special.chars" "$out"
+assert_contains "list: summary count" "3 secrets in $CTX" "$out"
 
 out=$(run_ok list)
 assert_contains "list contesti: test.e2e" "test.e2e" "$out"
@@ -153,6 +165,45 @@ assert_contains "env-file: DB_PASSWORD" 'DB_PASSWORD="newpassword"' "$env_conten
 assert_contains "env-file: API_TOKEN" 'API_TOKEN="tok_abc_999"' "$env_content"
 assert_contains "env-file: quotato" '"' "$env_content"
 
+# ─── 4b. ENV (export to stdout) ──────────────────────────────────────────────
+echo ""
+echo "── 4b. ENV ──"
+
+# Default (bash) export
+out=$(run_ok -c "$CTX" env)
+assert_contains "env: bash export db.password" "export DB_PASSWORD=" "$out"
+assert_contains "env: bash export api.token" "export API_TOKEN=" "$out"
+assert_contains "env: bash value" "newpassword" "$out"
+
+# Explicit --shell bash
+out=$(run_ok -c "$CTX" env --shell bash)
+assert_contains "env --shell bash: export" "export DB_PASSWORD=" "$out"
+
+# --shell fish
+out=$(run_ok -c "$CTX" env --shell fish)
+assert_contains "env --shell fish: set -gx" "set -gx DB_PASSWORD" "$out"
+
+# --shell powershell
+out=$(run_ok -c "$CTX" env --shell powershell)
+assert_contains "env --shell powershell: \$env:" '$env:DB_PASSWORD' "$out"
+
+# --unset (bash)
+out=$(run_ok -c "$CTX" env --unset)
+assert_contains "env --unset bash: unset" "unset DB_PASSWORD" "$out"
+assert_contains "env --unset bash: unset api" "unset API_TOKEN" "$out"
+
+# --unset --shell fish
+out=$(run_ok -c "$CTX" env --unset --shell fish)
+assert_contains "env --unset fish: set -e" "set -e DB_PASSWORD" "$out"
+
+# --unset --shell powershell
+out=$(run_ok -c "$CTX" env --unset --shell powershell)
+assert_contains "env --unset powershell: Remove-Item" "Remove-Item" "$out"
+
+# Empty context
+ec=0
+out=$(run_all -c "nonexistent.ctx.e2e" env 2>&1) || ec=$?
+assert_contains "env: empty context message" "No secrets" "$out"
 
 # ─── 5. LOAD ─────────────────────────────────────────────────────────────────
 echo ""
@@ -268,6 +319,15 @@ assert_contains "cmd list: test-echo" "test-echo" "$out"
 out=$(run_ok cmd run test-echo)
 assert_contains "cmd run: executed" "newpassword" "$out"
 
+# cmd run --quiet: suppress informational output
+out=$(run_ok cmd run -q test-echo)
+assert_contains "cmd run -q: executed" "newpassword" "$out"
+assert_not_contains "cmd run -q: no resolved msg" "Resolved" "$out"
+
+out=$(run_ok cmd run --quiet test-echo)
+assert_contains "cmd run --quiet: executed" "newpassword" "$out"
+assert_not_contains "cmd run --quiet: no resolved msg" "Resolved" "$out"
+
 out=$(run_ok cmd search "test*")
 assert_contains "cmd search: test-echo" "test-echo" "$out"
 
@@ -324,9 +384,194 @@ assert_contains "json get: value field" '"value"' "$out"
 out=$(run_ok --json list)
 assert_contains "json list: is array" "[" "$out"
 
-# ─── 12. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 12. CUSTOM DATABASE PATH ────────────────────────────────────────────────
 echo ""
-echo "── 12. CLEANUP ──"
+echo "── 12. CUSTOM DB PATH ──"
+
+CUSTOM_DB="$TMPDIR_TEST/custom-store.sqlite"
+
+# --db flag: add and get with custom database
+out=$(run_ok --db "$CUSTOM_DB" -c "$CTX" add db.custom -v "custom-value")
+assert_contains "db flag: add" "stored" "$out"
+
+out=$(run_ok --db "$CUSTOM_DB" -c "$CTX" get db.custom)
+assert_eq "db flag: get" "custom-value" "$out"
+
+# Custom DB should not see secrets from default DB
+out=$(run_ok --db "$CUSTOM_DB" -c "$CTX" list)
+assert_contains "db flag: list shows custom secret" "db.custom" "$out"
+assert_not_contains "db flag: list no default secrets" "api.token" "$out"
+
+# ENVSEC_DB env var: same behavior
+CUSTOM_DB2="$TMPDIR_TEST/custom-store2.sqlite"
+out=$(ENVSEC_DB="$CUSTOM_DB2" run_ok -c "$CTX" add db.envvar -v "envvar-value")
+assert_contains "ENVSEC_DB: add" "stored" "$out"
+
+out=$(ENVSEC_DB="$CUSTOM_DB2" run_ok -c "$CTX" get db.envvar)
+assert_eq "ENVSEC_DB: get" "envvar-value" "$out"
+
+# --db flag takes precedence over ENVSEC_DB
+out=$(ENVSEC_DB="$CUSTOM_DB2" run_ok --db "$CUSTOM_DB" -c "$CTX" get db.custom)
+assert_eq "db flag precedence over ENVSEC_DB" "custom-value" "$out"
+
+# Verify custom DB file was created
+if [[ -f "$CUSTOM_DB" ]]; then
+  green "  ✓ db flag: file created"; ((PASS++))
+else
+  red "  ✗ db flag: file not created at $CUSTOM_DB"; ((FAIL++))
+fi
+
+# Clean up custom DB secrets (keychain still has them)
+run_ok --db "$CUSTOM_DB" -c "$CTX" delete -y db.custom >/dev/null || true
+ENVSEC_DB="$CUSTOM_DB2" run_ok -c "$CTX" delete -y db.envvar >/dev/null || true
+
+# ─── 13. SECRET EXPIRY & AUDIT ───────────────────────────────────────────────
+echo ""
+echo "── 13. SECRET EXPIRY & AUDIT ──"
+
+CTX_EXP="test.e2e-expiry"
+
+# Add a secret with --expires
+out=$(run_ok -c "$CTX_EXP" add exp.short -v "shortlived" --expires 1m)
+assert_contains "add --expires: stored" "stored" "$out"
+assert_contains "add --expires: expiry note" "expires:" "$out"
+
+# Add a secret with long expiry
+out=$(run_ok -c "$CTX_EXP" add exp.long -v "longlived" --expires 1y)
+assert_contains "add --expires long: stored" "stored" "$out"
+
+# Add a secret without expiry
+run_ok -c "$CTX_EXP" add exp.none -v "noexpiry" >/dev/null
+
+# List should show expiry info for secrets that have it
+out=$(run_ok -c "$CTX_EXP" list)
+assert_contains "list expiry: exp.short" "exp.short" "$out"
+assert_contains "list expiry: expires marker" "expires" "$out"
+
+# Get with JSON should include expires_at
+out=$(run_ok -c "$CTX_EXP" --json get exp.short)
+assert_contains "get json: expires_at field" '"expires_at"' "$out"
+
+out=$(run_ok -c "$CTX_EXP" --json get exp.none)
+assert_contains "get json: null expires_at" "null" "$out"
+
+# Audit within 30d — should find the 1m secret (expires within 30d)
+out=$(run_ok -c "$CTX_EXP" audit --within 30d)
+assert_contains "audit 30d: finds short" "exp.short" "$out"
+assert_not_contains "audit 30d: no long" "exp.long" "$out"
+
+# Audit within 2y — should find both expiring secrets
+out=$(run_ok -c "$CTX_EXP" audit --within 2y)
+assert_contains "audit 2y: finds short" "exp.short" "$out"
+assert_contains "audit 2y: finds long" "exp.long" "$out"
+
+# Audit with no context — all contexts
+out=$(run_ok audit --within 2y)
+assert_contains "audit all: finds expiry context" "$CTX_EXP" "$out"
+
+# Audit JSON output
+out=$(run_ok -c "$CTX_EXP" --json audit --within 2y)
+assert_contains "audit json: is array" "[" "$out"
+assert_contains "audit json: has key" '"key"' "$out"
+assert_contains "audit json: has expired field" '"expired"' "$out"
+
+# Audit with nothing expiring
+out=$(run_ok -c "$CTX_EXP" audit --within 0m)
+# 0m means only already-expired, and our 1m secret hasn't expired yet
+assert_contains "audit 0m: nothing expired" "No secrets" "$out"
+
+# Invalid duration
+ec=0
+out=$(run_all -c "$CTX_EXP" add exp.bad -v "x" --expires "abc") || ec=$?
+assert_exit "add: invalid duration fails" "1" "$ec"
+
+# Update expiry on existing secret
+out=$(run_ok -c "$CTX_EXP" add exp.short -v "updated" --expires 7d)
+assert_contains "add update expiry: stored" "stored" "$out"
+
+# Clean up expiry context
+run_ok -c "$CTX_EXP" delete --all -y >/dev/null || true
+
+# ─── 14. SHARE (GPG ENCRYPTION) ───────────────────────────────────────────────
+echo ""
+echo "── 14. SHARE ──"
+
+# Check if gpg is available
+if command -v gpg &>/dev/null; then
+  # Generate a temporary GPG key for testing
+  GPG_HOME="$TMPDIR_TEST/gnupg"
+  mkdir -p "$GPG_HOME"
+  chmod 700 "$GPG_HOME"
+
+  cat > "$GPG_HOME/keygen-params" << 'GPGEOF'
+%no-protection
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Subkey-Length: 2048
+Name-Real: envsec test
+Name-Email: envsec-test@localhost
+Expire-Date: 0
+%commit
+GPGEOF
+
+  GNUPGHOME="$GPG_HOME" gpg --batch --gen-key "$GPG_HOME/keygen-params" 2>/dev/null
+
+  # Seed secrets for share test
+  run_ok -c "$CTX" add db.password -v "sharepass123" >/dev/null
+  run_ok -c "$CTX" add api.token -v "tok_share_456" >/dev/null
+
+  # Share to stdout (default .env format)
+  out=$(GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" share --encrypt-to envsec-test@localhost)
+  assert_contains "share: PGP header" "BEGIN PGP MESSAGE" "$out"
+  assert_contains "share: PGP footer" "END PGP MESSAGE" "$out"
+
+  # Decrypt and verify content
+  decrypted=$(echo "$out" | GNUPGHOME="$GPG_HOME" gpg --batch --decrypt 2>/dev/null)
+  assert_contains "share: decrypted has DB_PASSWORD" 'DB_PASSWORD=' "$decrypted"
+  assert_contains "share: decrypted has API_TOKEN" 'API_TOKEN=' "$decrypted"
+
+  # Share to file
+  SHARE_OUT="$TMPDIR_TEST/shared.enc"
+  GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" share --encrypt-to envsec-test@localhost -o "$SHARE_OUT" >/dev/null
+  if [[ -f "$SHARE_OUT" ]]; then
+    green "  ✓ share -o: file created"; ((PASS++))
+  else
+    red "  ✗ share -o: file not created"; ((FAIL++))
+  fi
+
+  file_content=$(cat "$SHARE_OUT")
+  assert_contains "share -o: PGP header in file" "BEGIN PGP MESSAGE" "$file_content"
+
+  # Decrypt file and verify
+  decrypted_file=$(GNUPGHOME="$GPG_HOME" gpg --batch --decrypt "$SHARE_OUT" 2>/dev/null)
+  assert_contains "share -o: decrypted file has DB_PASSWORD" 'DB_PASSWORD=' "$decrypted_file"
+
+  # Share with --json format
+  out=$(GNUPGHOME="$GPG_HOME" run_ok -c "$CTX" --json share --encrypt-to envsec-test@localhost)
+  decrypted_json=$(echo "$out" | GNUPGHOME="$GPG_HOME" gpg --batch --decrypt 2>/dev/null)
+  assert_contains "share --json: has context" '"context"' "$decrypted_json"
+  assert_contains "share --json: has secrets" '"secrets"' "$decrypted_json"
+
+  # Share empty context
+  ec=0
+  out=$(GNUPGHOME="$GPG_HOME" run_all -c "nonexistent.ctx.e2e" share --encrypt-to envsec-test@localhost 2>&1) || ec=$?
+  assert_contains "share: empty context message" "No secrets" "$out"
+
+  # Share with invalid GPG key
+  ec=0
+  out=$(GNUPGHOME="$GPG_HOME" run_all -c "$CTX" share --encrypt-to nonexistent-key@invalid 2>&1) || ec=$?
+  assert_exit "share: invalid GPG key fails" "1" "$ec"
+
+  # Clean up GPG home
+  rm -rf "$GPG_HOME"
+else
+  echo "  ⚠ gpg not found — skipping share tests"
+fi
+
+# ─── 15. CLEANUP & VERIFY ────────────────────────────────────────────────────
+echo ""
+echo "── 13. CLEANUP ──"
 
 for key in db.password api.token; do
   run_ok -c "$CTX" delete -y "$key" >/dev/null || true

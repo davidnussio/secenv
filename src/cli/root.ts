@@ -23,7 +23,14 @@ const json = Options.boolean("json").pipe(
   Options.withDefault(false)
 );
 
-export const rootCommand = Command.make("envsec", { context, debug, json });
+const db = Options.text("db").pipe(
+  Options.withDescription(
+    "Path to SQLite database file (default: ~/.envsec/store.sqlite). Also reads ENVSEC_DB env var."
+  ),
+  Options.optional
+);
+
+export const rootCommand = Command.make("envsec", { context, debug, json, db });
 
 /**
  * Resolve context from --context flag or ENVSEC_CONTEXT env var.

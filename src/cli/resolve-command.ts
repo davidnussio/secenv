@@ -20,7 +20,8 @@ const toEnvVarName = (key: string, index: number): string =>
 
 export const resolveCommand = (
   cmd: string,
-  ctx: string
+  ctx: string,
+  options?: { quiet?: boolean }
 ): Effect.Effect<
   ResolvedCommand,
   KeychainError | MetadataStoreError | InvalidKeyError | MissingSecretsError,
@@ -72,6 +73,8 @@ export const resolveCommand = (
       });
     }
 
-    yield* Console.log(`🔑 Resolved ${placeholders.length} secret(s)`);
+    yield* options?.quiet
+      ? Effect.void
+      : Console.log(`🔑 Resolved ${placeholders.length} secret(s)`);
     return { command: resolved, env };
   });

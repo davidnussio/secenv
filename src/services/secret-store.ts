@@ -2,12 +2,17 @@ import { Effect } from "effect";
 import { parse as parseSecretKey } from "../domain/secret-key.js";
 import { PlatformKeychainAccessLive } from "../implementations/platform-keychain-access.js";
 import { SqliteMetadataStoreLive } from "../implementations/sqlite-metadata-store.js";
+import { DatabaseConfigDefault } from "./database-config.js";
 import { KeychainAccess } from "./keychain-access.js";
 import { MetadataStore } from "./metadata-store.js";
 
 export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
   accessors: true,
-  dependencies: [PlatformKeychainAccessLive, SqliteMetadataStoreLive],
+  dependencies: [
+    PlatformKeychainAccessLive,
+    SqliteMetadataStoreLive,
+    DatabaseConfigDefault,
+  ],
   effect: Effect.gen(function* () {
     const keychain = yield* KeychainAccess;
     const metadata = yield* MetadataStore;
@@ -15,12 +20,13 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
     const set = Effect.fn("SecretStore.set")(function* (
       context: string,
       key: string,
-      value: string
+      value: string,
+      expiresAt?: string | null
     ) {
       const parsed = yield* parseSecretKey(key, context);
       yield* keychain.set(parsed.service, parsed.account, value);
       yield* metadata
-        .upsert(context, key)
+        .upsert(context, key, expiresAt)
         .pipe(
           Effect.catchAll((metadataError) =>
             keychain
@@ -37,6 +43,13 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
       yield* metadata.get(context, key);
       const parsed = yield* parseSecretKey(key, context);
       return yield* keychain.get(parsed.service, parsed.account);
+    });
+
+    const getMetadata = Effect.fn("SecretStore.getMetadata")(function* (
+      context: string,
+      key: string
+    ) {
+      return yield* metadata.get(context, key);
     });
 
     const remove = Effect.fn("SecretStore.remove")(function* (
@@ -116,9 +129,23 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
       yield* metadata.endBatch();
     });
 
+    const listExpiring = Effect.fn("SecretStore.listExpiring")(function* (
+      context: string,
+      withinMs: number
+    ) {
+      return yield* metadata.listExpiring(context, withinMs);
+    });
+
+    const listAllExpiring = Effect.fn("SecretStore.listAllExpiring")(function* (
+      withinMs: number
+    ) {
+      return yield* metadata.listAllExpiring(withinMs);
+    });
+
     return {
       set,
       get,
+      getMetadata,
       remove,
       search,
       list,
@@ -131,6 +158,8 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
       removeCommand,
       beginBatch,
       endBatch,
+      listExpiring,
+      listAllExpiring,
     };
   }),
 }) {}
