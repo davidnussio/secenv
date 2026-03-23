@@ -79,8 +79,7 @@ const escapeCmdkey = (s: string): string =>
     .replaceAll("&", "^&")
     .replaceAll("|", "^|")
     .replaceAll("<", "^<")
-    .replaceAll(">", "^>")
-    .replaceAll("%", "%%");
+    .replaceAll(">", "^>");
 
 const targetName = (service: string, account: string) =>
   `envsec:${service}/${account}`;
