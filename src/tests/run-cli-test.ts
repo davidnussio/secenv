@@ -1,14 +1,22 @@
+import { join } from "node:path";
 import { Command } from "@effect/cli";
 import { NodeContext } from "@effect/platform-node";
-import { Effect, Layer, type Layer as LayerType } from "effect";
+import { Effect, Layer } from "effect";
 import { vi } from "vitest";
 import { allCommands } from "../cli/index.js";
-import type { SecretStore } from "../services/secret-store.js";
+import { DatabaseConfigFrom } from "../services/database-config.js";
+import { SecretStore } from "../services/secret-store.js";
+import { KeychainAccessTest } from "./keychain-access-test.js";
 
-export function buildTestCli(
-  secretStoreLayer: LayerType.Layer<SecretStore, unknown, unknown>
-) {
-  const allLayers = Layer.mergeAll(secretStoreLayer, NodeContext.layer);
+export function buildTestCli() {
+  const dbPath = join(process.cwd(), "db", "test.db");
+  const dbLayer = DatabaseConfigFrom(dbPath);
+  const secretStoreLayer = SecretStore.Default.pipe(Layer.provide(dbLayer));
+  const testingLayers = Layer.mergeAll(
+    secretStoreLayer,
+    KeychainAccessTest,
+    NodeContext.layer
+  );
 
   return (arg: string) => {
     const logs: string[] = [];
@@ -25,7 +33,7 @@ export function buildTestCli(
     });
 
     const effect = run(["node", "envsec", ...arg.split(" ")]).pipe(
-      Effect.provide(allLayers),
+      Effect.provide(testingLayers),
       Effect.tapError(() => Effect.void)
     ) as Effect.Effect<void, unknown, never>;
 
