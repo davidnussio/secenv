@@ -40,6 +40,9 @@ const initDb = async (dbPath: string): Promise<Database> => {
   db.run(
     "CREATE TABLE IF NOT EXISTS env_exports (id INTEGER PRIMARY KEY AUTOINCREMENT, context TEXT NOT NULL, path TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))"
   );
+  db.run(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_env_exports_path ON env_exports(path)"
+  );
   const cols = db
     .exec("PRAGMA table_info(secrets)")
     .flatMap((r) => r.values.map((v) => v[1]));
@@ -463,10 +466,10 @@ const make = Effect.gen(function* () {
       function* (context: string, path: string) {
         yield* Effect.try({
           try: () => {
-            db.run("INSERT INTO env_exports (context, path) VALUES (?, ?)", [
-              context,
-              path,
-            ]);
+            db.run(
+              "INSERT INTO env_exports (context, path) VALUES (?, ?) ON CONFLICT(path) DO UPDATE SET context = excluded.context, created_at = datetime('now')",
+              [context, path]
+            );
             maybePersist();
           },
           catch: (error) =>
