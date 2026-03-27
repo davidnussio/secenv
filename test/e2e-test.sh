@@ -357,8 +357,10 @@ run_all get db.password >/dev/null || ec=$?
 assert_exit "error: missing context" "1" "$ec"
 
 ec=0
-run_all -c "$CTX" add singlepart -v test >/dev/null || ec=$?
-assert_exit "error: key without dot" "1" "$ec"
+run_ok -c "$CTX" add singlepart -v "test-single" >/dev/null
+out=$(run_ok -c "$CTX" get singlepart)
+assert_eq "add: single-part key works" "test-single" "$out"
+run_ok -c "$CTX" delete -y singlepart >/dev/null
 
 ec=0
 run_all -c "$CTX" add "a..b" -v test >/dev/null || ec=$?

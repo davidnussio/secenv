@@ -369,8 +369,10 @@ Write-Host "── 10. ERRORS ──"
 & node $CLI get db.password 2>$null | Out-Null
 Assert-ExitCode "error: missing context" 1 $LASTEXITCODE
 
-& node $CLI -c $CTX add singlepart -v test 2>$null | Out-Null
-Assert-ExitCode "error: key without dot" 1 $LASTEXITCODE
+Run-Ok @("-c", $CTX, "add", "singlepart", "-v", "test-single") | Out-Null
+$out = Run-Ok @("-c", $CTX, "get", "singlepart")
+Assert-Eq "add: single-part key works" "test-single" $out.Trim()
+Run-Ok @("-c", $CTX, "delete", "-y", "singlepart") | Out-Null
 
 & node $CLI -c $CTX add "a..b" -v test 2>$null | Out-Null
 Assert-ExitCode "error: key with empty parts" 1 $LASTEXITCODE
