@@ -516,7 +516,9 @@ Assert-Contains "audit all env-files: second path" $EnvTrackOut2 $out
 $out = Run-Ok @("-c", $CTX, "--json", "audit", "--within", "30d")
 Assert-Contains "audit json: has env_files" '"env_files"' $out
 Assert-Contains "audit json: has secrets key" '"secrets"' $out
-Assert-Contains "audit json: env file path" $EnvTrackOut $out
+# In JSON output, backslashes are escaped as \\, so we must match the escaped form
+$EnvTrackOutJson = $EnvTrackOut.Replace('\', '\\')
+Assert-Contains "audit json: env file path" $EnvTrackOutJson $out
 
 # Delete a tracked env file and verify audit prunes it
 Remove-Item $EnvTrackOut -Force -ErrorAction SilentlyContinue
