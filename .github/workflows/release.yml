@@ -27,3 +27,76 @@ jobs:
         run: pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  update-homebrew:
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for npm registry propagation
+        run: sleep 30
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: davidnussio/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update formula
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          URL="https://registry.npmjs.org/envsec/-/envsec-${VERSION}.tgz"
+
+          # Retry download until npm has propagated the package
+          for i in 1 2 3 4 5; do
+            HTTP_CODE=$(curl -sL -o envsec.tgz -w "%{http_code}" "$URL")
+            if [ "$HTTP_CODE" = "200" ]; then
+              break
+            fi
+            echo "Attempt $i: got HTTP $HTTP_CODE, retrying in 15s..."
+            sleep 15
+          done
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to download tarball after 5 attempts"
+            exit 1
+          fi
+
+          SHA256=$(shasum -a 256 envsec.tgz | awk '{print $1}')
+          rm envsec.tgz
+
+          cat > Formula/envsec.rb << EOF
+          class Envsec < Formula
+            desc "Secure environment secrets management using native OS credential stores"
+            homepage "https://github.com/davidnussio/envsec"
+            url "$URL"
+            # To update the sha256, run:
+            # curl -sL $URL | shasum -a 256
+            sha256 "$SHA256"
+            license "MIT"
+            version "$VERSION"
+
+            depends_on "node"
+
+            def install
+              system "npm", "install", *std_npm_args
+              bin.install_symlink libexec.glob("bin/*")
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/envsec --version")
+            end
+          end
+          EOF
+
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' Formula/envsec.rb
+
+      - name: Commit and push
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/envsec.rb
+          git commit -m "envsec ${VERSION}"
+          git push
