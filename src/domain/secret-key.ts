@@ -11,12 +11,6 @@ export const parse = Effect.fn("SecretKey.parse")(function* (
   env: string
 ) {
   const parts = key.split(".");
-  // if (parts.length < 2) {
-  //   return yield* new InvalidKeyError({
-  //     key,
-  //     message: `Key "${key}" must have at least 2 dot-separated parts (e.g. "service.account")`,
-  //   });
-  // }
 
   if (parts.some((p) => p === "")) {
     return yield* new InvalidKeyError({
@@ -26,17 +20,19 @@ export const parse = Effect.fn("SecretKey.parse")(function* (
   }
 
   const account = parts.at(-1);
-  const serviceParts = parts.slice(0, -1);
 
   if (!account) {
     return yield* new InvalidKeyError({
       key,
-      message: `Key "${key}" must have at least 2 dot-separated parts (e.g. "service.account")`,
+      message: `Key "${key}" must be a non-empty string`,
     });
   }
 
-  return {
-    service: `envsec.${env}.${serviceParts.join(".")}`,
-    account,
-  } satisfies ParsedKey;
+  const serviceParts = parts.slice(0, -1);
+  const service =
+    serviceParts.length > 0
+      ? `envsec.${env}.${serviceParts.join(".")}`
+      : `envsec.${env}`;
+
+  return { service, account } satisfies ParsedKey;
 });
