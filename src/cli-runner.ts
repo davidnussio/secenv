@@ -6,12 +6,15 @@ import { addCommand } from "./cli/add.js";
 import { auditCommand } from "./cli/audit.js";
 import { cmdCommand } from "./cli/cmd.js";
 import { handleComplete } from "./cli/complete.js";
+import { copyCommand } from "./cli/copy.js";
 import { delCommand, deleteCommand } from "./cli/delete.js";
 import { envCommand } from "./cli/env.js";
 import { envFileCommand } from "./cli/env-file.js";
 import { getCommand } from "./cli/get.js";
 import { listCommand } from "./cli/list.js";
 import { loadCommand } from "./cli/load.js";
+import { moveCommand } from "./cli/move.js";
+import { renameCommand } from "./cli/rename.js";
 import { rootCommand } from "./cli/root.js";
 import { runCommand } from "./cli/run.js";
 import { searchCommand } from "./cli/search.js";
@@ -33,15 +36,18 @@ const command = rootCommand.pipe(
     getCommand,
     deleteCommand,
     delCommand,
-    searchCommand,
+    renameCommand,
     listCommand,
+    searchCommand,
+    moveCommand,
+    copyCommand,
     runCommand,
-    envCommand,
-    envFileCommand,
-    loadCommand,
     cmdCommand,
-    auditCommand,
+    envFileCommand,
+    envCommand,
+    loadCommand,
     shareCommand,
+    auditCommand,
   ])
 );
 
@@ -74,7 +80,16 @@ const interceptComplete = (): { type: string; arg?: string } | null => {
 };
 
 /** Commands that mutate secrets or saved commands — trigger cache refresh. */
-const MUTATING_COMMANDS = new Set(["add", "delete", "del", "load", "cmd"]);
+const MUTATING_COMMANDS = new Set([
+  "add",
+  "delete",
+  "del",
+  "load",
+  "cmd",
+  "rename",
+  "move",
+  "copy",
+]);
 
 const isMutatingCommand = (): boolean => {
   const args = process.argv.slice(2);

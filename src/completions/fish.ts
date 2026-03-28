@@ -36,7 +36,7 @@ function __envsec_needs_command
     set -l args (commandline -opc)
     for arg in $args[2..]
         switch $arg
-            case add get delete del search list run env env-file load cmd audit share tui
+            case add get delete del search list run env env-file load cmd audit share rename move copy 
                 return 1
         end
     end
@@ -109,7 +109,9 @@ complete -c envsec -n __envsec_needs_command -a load -d 'Import from .env file'
 complete -c envsec -n __envsec_needs_command -a cmd -d 'Saved command management'
 complete -c envsec -n __envsec_needs_command -a audit -d 'Check expired secrets'
 complete -c envsec -n __envsec_needs_command -a share -d 'GPG-encrypted export'
-complete -c envsec -n __envsec_needs_command -a tui -d 'Interactive terminal UI'
+complete -c envsec -n __envsec_needs_command -a rename -d 'Rename a secret key'
+complete -c envsec -n __envsec_needs_command -a move -d 'Move secrets between contexts'
+complete -c envsec -n __envsec_needs_command -a copy -d 'Copy secrets between contexts'
 
 # add
 complete -c envsec -n '__envsec_using_command add' -x -a '(__envsec_keys)' -d 'Secret key'
@@ -148,6 +150,24 @@ complete -c envsec -n '__envsec_using_command audit' -l within -s w -x -d 'Durat
 # share
 complete -c envsec -n '__envsec_using_command share' -l recipient -s r -x -d 'GPG recipient'
 
+# rename
+complete -c envsec -n '__envsec_using_command rename' -x -a '(__envsec_keys)' -d 'Secret key'
+complete -c envsec -n '__envsec_using_command rename' -l force -s f -d 'Overwrite target if exists'
+
+# move
+complete -c envsec -n '__envsec_using_command move' -x -a '(__envsec_keys)' -d 'Secret key pattern'
+complete -c envsec -n '__envsec_using_command move' -l to -s t -x -a '(__envsec_contexts)' -d 'Target context'
+complete -c envsec -n '__envsec_using_command move' -l force -s f -d 'Overwrite existing secrets'
+complete -c envsec -n '__envsec_using_command move' -l yes -s y -d 'Skip confirmation'
+complete -c envsec -n '__envsec_using_command move' -l all -d 'Move all secrets'
+
+# copy
+complete -c envsec -n '__envsec_using_command copy' -x -a '(__envsec_keys)' -d 'Secret key pattern'
+complete -c envsec -n '__envsec_using_command copy' -l to -s t -x -a '(__envsec_contexts)' -d 'Target context'
+complete -c envsec -n '__envsec_using_command copy' -l force -s f -d 'Overwrite existing secrets'
+complete -c envsec -n '__envsec_using_command copy' -l yes -s y -d 'Skip confirmation'
+complete -c envsec -n '__envsec_using_command copy' -l all -d 'Copy all secrets'
+
 # cmd subcommands
 complete -c envsec -n '__envsec_using_command cmd; and __envsec_cmd_needs_sub' -a run -d 'Run a saved command'
 complete -c envsec -n '__envsec_using_command cmd; and __envsec_cmd_needs_sub' -a search -d 'Search saved commands'
@@ -185,7 +205,9 @@ complete -c esec -n __envsec_needs_command -a load -d 'Import from .env file'
 complete -c esec -n __envsec_needs_command -a cmd -d 'Saved command management'
 complete -c esec -n __envsec_needs_command -a audit -d 'Check expired secrets'
 complete -c esec -n __envsec_needs_command -a share -d 'GPG-encrypted export'
-complete -c esec -n __envsec_needs_command -a tui -d 'Interactive terminal UI'
+complete -c esec -n __envsec_needs_command -a rename -d 'Rename a secret key'
+complete -c esec -n __envsec_needs_command -a move -d 'Move secrets between contexts'
+complete -c esec -n __envsec_needs_command -a copy -d 'Copy secrets between contexts'
 complete -c esec -n '__envsec_using_command add' -x -a '(__envsec_keys)' -d 'Secret key'
 complete -c esec -n '__envsec_using_command add' -l value -s v -x -d 'Value to store'
 complete -c esec -n '__envsec_using_command add' -l expires -s e -x -d 'Expiry duration'
@@ -205,6 +227,18 @@ complete -c esec -n '__envsec_using_command env-file' -l output -s o -r -F -d 'O
 complete -c esec -n '__envsec_using_command load' -r -F -d '.env file'
 complete -c esec -n '__envsec_using_command audit' -l within -s w -x -d 'Duration window'
 complete -c esec -n '__envsec_using_command share' -l recipient -s r -x -d 'GPG recipient'
+complete -c esec -n '__envsec_using_command rename' -x -a '(__envsec_keys)' -d 'Secret key'
+complete -c esec -n '__envsec_using_command rename' -l force -s f -d 'Overwrite target if exists'
+complete -c esec -n '__envsec_using_command move' -x -a '(__envsec_keys)' -d 'Secret key pattern'
+complete -c esec -n '__envsec_using_command move' -l to -s t -x -a '(__envsec_contexts)' -d 'Target context'
+complete -c esec -n '__envsec_using_command move' -l force -s f -d 'Overwrite existing secrets'
+complete -c esec -n '__envsec_using_command move' -l yes -s y -d 'Skip confirmation'
+complete -c esec -n '__envsec_using_command move' -l all -d 'Move all secrets'
+complete -c esec -n '__envsec_using_command copy' -x -a '(__envsec_keys)' -d 'Secret key pattern'
+complete -c esec -n '__envsec_using_command copy' -l to -s t -x -a '(__envsec_contexts)' -d 'Target context'
+complete -c esec -n '__envsec_using_command copy' -l force -s f -d 'Overwrite existing secrets'
+complete -c esec -n '__envsec_using_command copy' -l yes -s y -d 'Skip confirmation'
+complete -c esec -n '__envsec_using_command copy' -l all -d 'Copy all secrets'
 complete -c esec -n '__envsec_using_command cmd; and __envsec_cmd_needs_sub' -a run -d 'Run a saved command'
 complete -c esec -n '__envsec_using_command cmd; and __envsec_cmd_needs_sub' -a search -d 'Search saved commands'
 complete -c esec -n '__envsec_using_command cmd; and __envsec_cmd_needs_sub' -a list -d 'List saved commands'

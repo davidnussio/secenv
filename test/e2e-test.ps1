@@ -93,6 +93,11 @@ function Cleanup-Secrets {
     }
     & node $CLI -c "test.e2e-all" delete --all -y 2>$null | Out-Null
     & node $CLI -c "test.e2e-expiry" delete --all -y 2>$null | Out-Null
+    & node $CLI -c "test.e2e-rename" delete --all -y 2>$null | Out-Null
+    & node $CLI -c "test.e2e-move-src" delete --all -y 2>$null | Out-Null
+    & node $CLI -c "test.e2e-move-dst" delete --all -y 2>$null | Out-Null
+    & node $CLI -c "test.e2e-copy-src" delete --all -y 2>$null | Out-Null
+    & node $CLI -c "test.e2e-copy-dst" delete --all -y 2>$null | Out-Null
     & node $CLI cmd delete "test-echo" 2>$null | Out-Null
     & node $CLI cmd delete "test-multi" 2>$null | Out-Null
 }
@@ -598,9 +603,228 @@ Assert-NotContains "stale: list after cleanup" "stale.secret" $out
 & node $CLI -c $CTX_STALE get stale.secret 2>$null | Out-Null
 Assert-ExitCode "stale: get after cleanup fails" 1 $LASTEXITCODE
 
-# ─── 17. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 17. RENAME ───────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "── 17. CLEANUP ──"
+Write-Host "── 17. RENAME ──"
+
+$CTX_REN = "test.e2e-rename"
+
+# Seed secrets
+Run-Ok @("-c", $CTX_REN, "add", "old.key", "-v", "rename-value") | Out-Null
+Run-Ok @("-c", $CTX_REN, "add", "existing.key", "-v", "existing-value") | Out-Null
+
+# Basic rename
+$out = Run-Ok @("-c", $CTX_REN, "rename", "old.key", "new.key")
+Assert-Contains "rename: success" "Renamed" $out
+Assert-Contains "rename: shows old key" "old.key" $out
+Assert-Contains "rename: shows new key" "new.key" $out
+
+# Verify value moved
+$out = Run-Ok @("-c", $CTX_REN, "get", "new.key")
+Assert-Eq "rename: value preserved" "rename-value" $out.Trim()
+
+# Old key should be gone
+& node $CLI -c $CTX_REN get old.key 2>$null | Out-Null
+Assert-ExitCode "rename: old key gone" 1 $LASTEXITCODE
+
+# Rename to existing key without --force should fail
+$out = Run-All @("-c", $CTX_REN, "rename", "new.key", "existing.key")
+$ec = $LASTEXITCODE
+Assert-ExitCode "rename: conflict fails" 1 $ec
+Assert-Contains "rename: conflict message" "already exists" $out
+
+# Rename to existing key with --force should succeed
+$out = Run-Ok @("-c", $CTX_REN, "rename", "new.key", "existing.key", "-f")
+Assert-Contains "rename: force success" "Renamed" $out
+
+$out = Run-Ok @("-c", $CTX_REN, "get", "existing.key")
+Assert-Eq "rename: force value" "rename-value" $out.Trim()
+
+# Rename same key should fail
+$out = Run-All @("-c", $CTX_REN, "rename", "existing.key", "existing.key")
+$ec = $LASTEXITCODE
+Assert-ExitCode "rename: same key fails" 1 $ec
+
+# JSON output
+Run-Ok @("-c", $CTX_REN, "add", "json.test", "-v", "json-val") | Out-Null
+$out = Run-Ok @("-c", $CTX_REN, "--json", "rename", "json.test", "json.renamed")
+Assert-Contains "rename json: action" '"rename"' $out
+Assert-Contains "rename json: from" '"json.test"' $out
+Assert-Contains "rename json: to" '"json.renamed"' $out
+
+# Clean up
+Run-Ok @("-c", $CTX_REN, "delete", "--all", "-y") | Out-Null
+
+# ─── 18. MOVE ─────────────────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "── 18. MOVE ──"
+
+$CTX_MSRC = "test.e2e-move-src"
+$CTX_MDST = "test.e2e-move-dst"
+
+# Seed source context
+Run-Ok @("-c", $CTX_MSRC, "add", "redis.host", "-v", "localhost") | Out-Null
+Run-Ok @("-c", $CTX_MSRC, "add", "redis.port", "-v", "6379") | Out-Null
+Run-Ok @("-c", $CTX_MSRC, "add", "redis.password", "-v", "r3d1s") | Out-Null
+Run-Ok @("-c", $CTX_MSRC, "add", "api.token", "-v", "tok_move") | Out-Null
+
+# Move single key
+$out = Run-Ok @("-c", $CTX_MSRC, "move", "api.token", "--to", $CTX_MDST)
+Assert-Contains "move single: success" "Moved" $out
+Assert-Contains "move single: count" "1 secret" $out
+
+# Verify moved
+$out = Run-Ok @("-c", $CTX_MDST, "get", "api.token")
+Assert-Eq "move single: value in target" "tok_move" $out.Trim()
+
+# Source should not have it
+& node $CLI -c $CTX_MSRC get api.token 2>$null | Out-Null
+Assert-ExitCode "move single: gone from source" 1 $LASTEXITCODE
+
+# Move with glob pattern (redis.*)
+$out = Run-Ok @("-c", $CTX_MSRC, "move", "redis.*", "--to", $CTX_MDST, "-y")
+Assert-Contains "move glob: success" "Moved" $out
+Assert-Contains "move glob: count" "3 secrets" $out
+
+# Verify all redis keys moved
+$out = Run-Ok @("-c", $CTX_MDST, "get", "redis.host")
+Assert-Eq "move glob: redis.host" "localhost" $out.Trim()
+$out = Run-Ok @("-c", $CTX_MDST, "get", "redis.port")
+Assert-Eq "move glob: redis.port" "6379" $out.Trim()
+$out = Run-Ok @("-c", $CTX_MDST, "get", "redis.password")
+Assert-Eq "move glob: redis.password" "r3d1s" $out.Trim()
+
+# Source should be empty
+$out = Run-Ok @("-c", $CTX_MSRC, "list")
+Assert-Contains "move glob: source empty" "No secrets" $out
+
+# Move with --all
+Run-Ok @("-c", $CTX_MSRC, "add", "new.one", "-v", "v1") | Out-Null
+Run-Ok @("-c", $CTX_MSRC, "add", "new.two", "-v", "v2") | Out-Null
+
+# Clean target first to avoid conflicts
+Run-Ok @("-c", $CTX_MDST, "delete", "--all", "-y") | Out-Null
+
+$out = Run-Ok @("-c", $CTX_MSRC, "move", "--all", "--to", $CTX_MDST, "-y")
+Assert-Contains "move all: success" "Moved" $out
+Assert-Contains "move all: count" "2 secrets" $out
+
+# Conflict detection
+Run-Ok @("-c", $CTX_MSRC, "add", "conflict.key", "-v", "src-val") | Out-Null
+Run-Ok @("-c", $CTX_MDST, "add", "conflict.key", "-v", "dst-val") | Out-Null
+
+$out = Run-All @("-c", $CTX_MSRC, "move", "conflict.key", "--to", $CTX_MDST)
+$ec = $LASTEXITCODE
+Assert-ExitCode "move conflict: fails" 1 $ec
+Assert-Contains "move conflict: message" "already has" $out
+
+# Move with --force overwrites
+$out = Run-Ok @("-c", $CTX_MSRC, "move", "conflict.key", "--to", $CTX_MDST, "-f")
+Assert-Contains "move force: success" "Moved" $out
+
+$out = Run-Ok @("-c", $CTX_MDST, "get", "conflict.key")
+Assert-Eq "move force: value overwritten" "src-val" $out.Trim()
+
+# Same context should fail
+Run-Ok @("-c", $CTX_MSRC, "add", "same.ctx", "-v", "val") | Out-Null
+$out = Run-All @("-c", $CTX_MSRC, "move", "same.ctx", "--to", $CTX_MSRC)
+$ec = $LASTEXITCODE
+Assert-ExitCode "move same ctx: fails" 1 $ec
+
+# JSON output
+Run-Ok @("-c", $CTX_MSRC, "add", "json.move", "-v", "jval") | Out-Null
+& node $CLI -c $CTX_MDST delete -y json.move 2>$null | Out-Null
+$out = Run-Ok @("-c", $CTX_MSRC, "--json", "move", "json.move", "--to", $CTX_MDST)
+Assert-Contains "move json: action" '"move"' $out
+Assert-Contains "move json: from" $CTX_MSRC $out
+Assert-Contains "move json: to" $CTX_MDST $out
+
+# Clean up
+Run-Ok @("-c", $CTX_MSRC, "delete", "--all", "-y") | Out-Null
+Run-Ok @("-c", $CTX_MDST, "delete", "--all", "-y") | Out-Null
+
+# ─── 19. COPY ─────────────────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "── 19. COPY ──"
+
+$CTX_CSRC = "test.e2e-copy-src"
+$CTX_CDST = "test.e2e-copy-dst"
+
+# Seed source context
+Run-Ok @("-c", $CTX_CSRC, "add", "redis.host", "-v", "localhost") | Out-Null
+Run-Ok @("-c", $CTX_CSRC, "add", "redis.port", "-v", "6379") | Out-Null
+Run-Ok @("-c", $CTX_CSRC, "add", "redis.password", "-v", "r3d1s") | Out-Null
+Run-Ok @("-c", $CTX_CSRC, "add", "api.token", "-v", "tok_copy") | Out-Null
+
+# Copy single key
+$out = Run-Ok @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CDST)
+Assert-Contains "copy single: success" "Copied" $out
+Assert-Contains "copy single: count" "1 secret" $out
+
+# Verify copied
+$out = Run-Ok @("-c", $CTX_CDST, "get", "api.token")
+Assert-Eq "copy single: value in target" "tok_copy" $out.Trim()
+
+# Source should still have it (unlike move)
+$out = Run-Ok @("-c", $CTX_CSRC, "get", "api.token")
+Assert-Eq "copy single: source intact" "tok_copy" $out.Trim()
+
+# Copy with glob pattern (redis.*)
+$out = Run-Ok @("-c", $CTX_CSRC, "copy", "redis.*", "--to", $CTX_CDST, "-y")
+Assert-Contains "copy glob: success" "Copied" $out
+Assert-Contains "copy glob: count" "3 secrets" $out
+
+# Verify all redis keys copied
+$out = Run-Ok @("-c", $CTX_CDST, "get", "redis.host")
+Assert-Eq "copy glob: redis.host" "localhost" $out.Trim()
+$out = Run-Ok @("-c", $CTX_CDST, "get", "redis.password")
+Assert-Eq "copy glob: redis.password" "r3d1s" $out.Trim()
+
+# Source still has everything
+$out = Run-Ok @("-c", $CTX_CSRC, "list")
+Assert-Contains "copy glob: source has redis.host" "redis.host" $out
+Assert-Contains "copy glob: source has api.token" "api.token" $out
+
+# Copy with --all
+Run-Ok @("-c", $CTX_CDST, "delete", "--all", "-y") | Out-Null
+$out = Run-Ok @("-c", $CTX_CSRC, "copy", "--all", "--to", $CTX_CDST, "-y")
+Assert-Contains "copy all: success" "Copied" $out
+Assert-Contains "copy all: count" "4 secrets" $out
+
+# Conflict detection
+$out = Run-All @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CDST)
+$ec = $LASTEXITCODE
+Assert-ExitCode "copy conflict: fails" 1 $ec
+Assert-Contains "copy conflict: message" "already has" $out
+
+# Copy with --force overwrites
+Run-Ok @("-c", $CTX_CSRC, "add", "api.token", "-v", "updated-tok") | Out-Null
+$out = Run-Ok @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CDST, "-f")
+Assert-Contains "copy force: success" "Copied" $out
+
+$out = Run-Ok @("-c", $CTX_CDST, "get", "api.token")
+Assert-Eq "copy force: value overwritten" "updated-tok" $out.Trim()
+
+# Same context should fail
+$out = Run-All @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CSRC)
+$ec = $LASTEXITCODE
+Assert-ExitCode "copy same ctx: fails" 1 $ec
+
+# JSON output
+& node $CLI -c $CTX_CDST delete -y json.copy 2>$null | Out-Null
+Run-Ok @("-c", $CTX_CSRC, "add", "json.copy", "-v", "jval") | Out-Null
+$out = Run-Ok @("-c", $CTX_CSRC, "--json", "copy", "json.copy", "--to", $CTX_CDST)
+Assert-Contains "copy json: action" '"copy"' $out
+Assert-Contains "copy json: from" $CTX_CSRC $out
+Assert-Contains "copy json: to" $CTX_CDST $out
+
+# Clean up
+Run-Ok @("-c", $CTX_CSRC, "delete", "--all", "-y") | Out-Null
+Run-Ok @("-c", $CTX_CDST, "delete", "--all", "-y") | Out-Null
+
+# ─── 20. CLEANUP & VERIFY ────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "── 20. CLEANUP ──"
 
 foreach ($key in @("db.password", "api.token", "special.emoji", "special.utf8")) {
     Run-Ok @("-c", $CTX, "delete", "-y", $key) | Out-Null

@@ -48,7 +48,7 @@ const USE_CASES = [
       },
       {
         prompt: false,
-        text: "✓ Wrote 12 secrets to ~/projects/new-project/.env",
+        text: "✔ Wrote 12 secrets to ~/projects/new-project/.env",
       },
     ],
   },
@@ -74,7 +74,7 @@ const USE_CASES = [
       },
       {
         prompt: false,
-        text: "🔑 Enter secret value:",
+        text: "◆ Enter secret value:",
       },
       {
         prompt: false,
@@ -95,15 +95,15 @@ const USE_CASES = [
       },
       {
         prompt: false,
-        text: "🔑 Enter secret value:",
+        text: "◆ Enter secret value:",
       },
       {
         prompt: false,
         text: '✔ Secret "api.token" stored in context "myapp.prod"',
       },
       { prompt: true, text: "envsec search 'myapp.*'" },
-      { prompt: false, text: "📁 myapp.dev  (2 secrets)" },
-      { prompt: false, text: "📁 myapp.prod  (2 secrets)" },
+      { prompt: false, text: "▸ myapp.dev  (2 secrets)" },
+      { prompt: false, text: "▸ myapp.prod  (2 secrets)" },
     ],
   },
   {
@@ -117,7 +117,7 @@ const USE_CASES = [
         prompt: true,
         text: `envsec -c myapp.prod run 'curl -X GET "https://pie.dev/headers" -H "Authorization: Bearer {api.token}"'`,
       },
-      { prompt: false, text: "🔒 Resolved 1 secret" },
+      { prompt: false, text: "■ Resolved 1 secret" },
       {
         prompt: false,
         text: `{ "headers": { "Authorization": "Bearer token-1234567890" }`,
@@ -126,7 +126,7 @@ const USE_CASES = [
         prompt: true,
         text: `envsec -c myapp.dev run 'curl -X GET "https://pie.dev/headers" -H "Authorization: Bearer {api.token}"'`,
       },
-      { prompt: false, text: "🔒 Resolved 1 secret" },
+      { prompt: false, text: "■ Resolved 1 secret" },
       {
         prompt: false,
         text: `{ "headers": { "Authorization": "Bearer dev-token-abc" }`,
@@ -144,7 +144,7 @@ const USE_CASES = [
         prompt: true,
         text: "envsec -c myapp.dev env-file --output .env.local",
       },
-      { prompt: false, text: "📄 Written 4 secrets to .env.local" },
+      { prompt: false, text: "· Written 4 secrets to .env.local" },
       { prompt: true, text: "cat .env.local" },
       { prompt: false, text: 'API_KEY="sk-abc123"' },
       { prompt: false, text: 'DB_PASSWORD="s3cret"' },
@@ -161,7 +161,7 @@ const USE_CASES = [
       { prompt: true, text: "envsec -c myapp.dev load --input .env.local" },
       {
         prompt: false,
-        text: `⚠ Skipped "api.url": already exists (use --force to overwrite)`,
+        text: `▲ Skipped "api.url": already exists (use --force to overwrite)`,
       },
       { prompt: false, text: "✔ Done: 3 added, 0 overwritten, 1 skipped" },
     ],
@@ -180,40 +180,40 @@ const USE_CASES = [
         prompt: false,
         text: `✔ Secret "api.token" stored in context "myapp.dev"`,
       },
-      { prompt: false, text: "expires: 2026-04-26 06:47:05 UTC" },
+      { prompt: false, text: "  ◔ expires: 2026-04-26 06:47:05 UTC" },
       { prompt: true, text: "envsec audit" },
       {
         prompt: false,
-        text: "🔍 Secrets expiring within 30d across all contexts:",
+        text: "◎ Secrets expiring within 30d across all contexts:",
       },
-      { prompt: false, text: "  🕐 [myapp.dev] api.token  expires in 29d" },
+      { prompt: false, text: "  ◔ [myapp.dev] api.token  expires in 29d" },
       {
         prompt: false,
-        text: "📊 0 expired, 1 expiring soon across 1 context (1 total)",
+        text: "▪ 0 expired, 1 expiring soon across 1 context (1 total)",
       },
       { prompt: false, text: "" },
-      { prompt: false, text: "📄 Generated .env files:" },
-      { prompt: false, text: "  📄 ~/projects/old-api/.env" },
+      { prompt: false, text: "· Generated .env files:" },
+      { prompt: false, text: "  · ~/projects/old-api/.env" },
       {
         prompt: false,
         text: "    context: old-api  generated: 2025-08-17 16:21:11",
       },
-      { prompt: false, text: "  📄 ~/projects/demo-app/.env" },
+      { prompt: false, text: "  · ~/projects/demo-app/.env" },
       {
         prompt: false,
         text: "    context: demo-app  generated: 2025-12-09 11:41:59",
       },
-      { prompt: false, text: "  📄 ~/projects/freelance-2023/.env" },
+      { prompt: false, text: "  · ~/projects/freelance-2023/.env" },
       {
         prompt: false,
         text: "    context: freelance-2023  generated: 2023-03-08 08:30:00",
       },
-      { prompt: false, text: "  📄 ~/projects/new-project/.env" },
+      { prompt: false, text: "  · ~/projects/new-project/.env" },
       {
         prompt: false,
         text: "    context: new-project  generated: 2026-03-27 06:42:19",
       },
-      { prompt: false, text: "📊 4 env files generated" },
+      { prompt: false, text: "▪ 4 env files generated" },
     ],
   },
   {
@@ -228,7 +228,7 @@ const USE_CASES = [
       },
       {
         prompt: false,
-        text: `🛡 Encrypted 4 secrets from "myapp.dev" for alice@example.com → secrets.enc`,
+        text: `◈ Encrypted 4 secrets from "myapp.dev" for alice@example.com → secrets.enc`,
       },
       { prompt: true, text: "# Teammate decrypts and imports:" },
       {
@@ -243,6 +243,57 @@ const USE_CASES = [
     ],
   },
   {
+    id: "reuse-dev-keys-for-new-projects",
+    question:
+      "How do I reuse my dev API keys when starting a new project or POC?",
+    problem:
+      "When you start a new project or try a new tool, you often need the same API keys you already use in development. Instead of hunting through dashboards or creating new ones, copy them from your dev context into the new project context in one command.",
+    lines: [
+      { prompt: false, text: "# You already have dev keys stored" },
+      { prompt: true, text: "envsec -c dev list" },
+      { prompt: false, text: "◆ openai.key  updated: 2026-03-15 10:30:00" },
+      { prompt: false, text: "◆ stripe.key  updated: 2026-03-10 08:15:00" },
+      {
+        prompt: false,
+        text: "◆ resend.key  updated: 2026-02-28 14:20:00",
+      },
+      { prompt: false, text: "" },
+      { prompt: false, text: '▪ 3 secrets in "dev"' },
+      {
+        prompt: false,
+        text: "# Copy everything to the new project context",
+      },
+      {
+        prompt: true,
+        text: "envsec -c dev copy --all --to my-poc -y",
+      },
+      {
+        prompt: false,
+        text: '✔ Copied 3 secrets from "dev" → "my-poc"',
+      },
+      {
+        prompt: false,
+        text: "# Or copy only what you need with a glob pattern",
+      },
+      {
+        prompt: true,
+        text: 'envsec -c dev copy "openai.*" --to ai-experiment',
+      },
+      {
+        prompt: false,
+        text: '✔ Copied 1 secret from "dev" → "ai-experiment"',
+      },
+      {
+        prompt: false,
+        text: "# Start working immediately",
+      },
+      {
+        prompt: true,
+        text: "eval $(envsec -c my-poc env)",
+      },
+    ],
+  },
+  {
     id: "export-secrets-to-shell",
     question:
       "How do I export secrets as environment variables in my current shell?",
@@ -250,7 +301,7 @@ const USE_CASES = [
       "You want secrets available as environment variables in your current session, without writing any files to disk.",
     lines: [
       { prompt: true, text: "eval $(envsec -c myapp.dev env)" },
-      { prompt: false, text: "✓ Exported API_KEY, DB_PASSWORD, API_URL" },
+      { prompt: false, text: "✔ Exported API_KEY, DB_PASSWORD, API_URL" },
       { prompt: true, text: "echo $API_KEY" },
       { prompt: false, text: "sk-abc123" },
       { prompt: true, text: "# Also supports fish and powershell:" },

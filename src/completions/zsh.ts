@@ -57,7 +57,9 @@ _envsec() {
                 'cmd:Saved command management'
                 'audit:Check expired/expiring secrets'
                 'share:GPG-encrypted export'
-                'tui:Interactive terminal UI'
+                'rename:Rename a secret key'
+                'move:Move secrets between contexts'
+                'copy:Copy secrets between contexts'
             )
             _describe 'subcommand' subcommands
             ;;
@@ -144,6 +146,28 @@ _envsec() {
                 share)
                     _arguments \\
                         '(-r --recipient)'{-r,--recipient}'[GPG recipient]:recipient:'
+                    ;;
+                rename)
+                    _arguments \\
+                        '(-f --force)'{-f,--force}'[Overwrite target if exists]' \\
+                        '1:old key:_envsec_keys' \\
+                        '2:new key:_envsec_keys'
+                    ;;
+                move)
+                    _arguments \\
+                        '(-t --to)'{-t,--to}'[Target context]:context:_envsec_contexts' \\
+                        '(-f --force)'{-f,--force}'[Overwrite existing secrets]' \\
+                        '(-y --yes)'{-y,--yes}'[Skip confirmation]' \\
+                        '--all[Move all secrets]' \\
+                        '1:pattern:_envsec_keys'
+                    ;;
+                copy)
+                    _arguments \\
+                        '(-t --to)'{-t,--to}'[Target context]:context:_envsec_contexts' \\
+                        '(-f --force)'{-f,--force}'[Overwrite existing secrets]' \\
+                        '(-y --yes)'{-y,--yes}'[Skip confirmation]' \\
+                        '--all[Copy all secrets]' \\
+                        '1:pattern:_envsec_keys'
                     ;;
             esac
             ;;

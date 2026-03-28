@@ -16,7 +16,7 @@ _envsec_completions() {
                 context_val="\${COMP_WORDS[i+1]}"
                 ((i++))
                 ;;
-            add|get|delete|del|search|list|run|env|env-file|load|cmd|audit|share|tui)
+            add|get|delete|del|search|list|run|env|env-file|load|cmd|audit|share|rename|move|copy)
                 if [[ -z "$cmd" ]]; then
                     cmd="\${COMP_WORDS[i]}"
                 fi
@@ -50,6 +50,14 @@ _envsec_completions() {
         return 0
     fi
 
+    # Complete --to / -t values with dynamic contexts (move/copy)
+    if [[ "$prev" == "-t" || "$prev" == "--to" ]]; then
+        local contexts
+        contexts="$(${bin} __complete contexts 2>/dev/null)"
+        COMPREPLY=( $(compgen -W "$contexts" -- "$cur") )
+        return 0
+    fi
+
     # Complete --shell / -s values
     if [[ "$prev" == "-s" || "$prev" == "--shell" ]]; then
         COMPREPLY=( $(compgen -W "bash zsh fish powershell" -- "$cur") )
@@ -72,7 +80,7 @@ _envsec_completions() {
     if [[ "$cur" == -* ]]; then
         case "$cmd" in
             "")
-                opts="-c -d -h --context --debug --json --db --completions --help --version add get delete del search list run env env-file load cmd audit share tui"
+                opts="-c -d -h --context --debug --json --db --completions --help --version add get delete del search list run env env-file load cmd audit share rename move copy"
                 ;;
             add)
                 opts="-v -e -h --value --expires --help"
@@ -110,6 +118,15 @@ _envsec_completions() {
             share)
                 opts="-r -h --recipient --help"
                 ;;
+            rename)
+                opts="-f -h --force --help"
+                ;;
+            move)
+                opts="-t -f -y -h --to --force --yes --all --help"
+                ;;
+            copy)
+                opts="-t -f -y -h --to --force --yes --all --help"
+                ;;
         esac
         COMPREPLY=( $(compgen -W "$opts" -- "$cur") )
         return 0
@@ -119,9 +136,17 @@ _envsec_completions() {
     case "$cmd" in
         "")
             # Top-level: complete subcommands
-            COMPREPLY=( $(compgen -W "add get delete del search list run env env-file load cmd audit share tui" -- "$cur") )
+            COMPREPLY=( $(compgen -W "add get delete del search list run env env-file load cmd audit share rename move copy" -- "$cur") )
             ;;
         get|delete|del|add)
+            # Complete secret keys if context is known
+            if [[ -n "$context_val" ]]; then
+                local keys
+                keys="$(${bin} __complete keys "$context_val" 2>/dev/null)"
+                COMPREPLY=( $(compgen -W "$keys" -- "$cur") )
+            fi
+            ;;
+        rename|move|copy)
             # Complete secret keys if context is known
             if [[ -n "$context_val" ]]; then
                 local keys

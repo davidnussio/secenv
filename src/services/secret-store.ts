@@ -32,7 +32,7 @@ export class SecretStore extends Effect.Service<SecretStore>()("SecretStore", {
     SqliteMetadataStoreLive,
     DatabaseConfigDefault,
   ],
-  effect: Effect.gen(function* () {
+  scoped: Effect.gen(function* () {
     const keychain = yield* KeychainAccess;
     const metadata = yield* MetadataStore;
 

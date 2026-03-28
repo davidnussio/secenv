@@ -148,3 +148,6 @@ skills-lock.json
 .kiro
 .agents
 .vercel
+
+# MacOS
+.DS_Store

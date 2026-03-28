@@ -20,48 +20,29 @@ const reservedNames = new Set([
   "prototype",
 ]);
 
-const nonEmpty = Schema.String.pipe(
-  Schema.filter((s) => s.length > 0 || "Context name cannot be empty")
-);
-
-const bounded = Schema.String.pipe(
+export const ContextName = Schema.String.pipe(
+  Schema.filter((s) => s.length > 0 || "Context name cannot be empty"),
   Schema.filter(
     (s) =>
       s.length <= maxLength ||
       `Context name is too long (${s.length} chars, max ${maxLength})`
-  )
-);
-
-const noPathSeparators = Schema.String.pipe(
+  ),
   Schema.filter(
     (s) =>
       !(s.includes("/") || s.includes("\\")) ||
       `Context name "${s}" must not contain path separators (/ or \\)`
-  )
-);
-
-const notReserved = Schema.String.pipe(
+  ),
   Schema.filter(
     (s) =>
       !reservedNames.has(s) ||
       `Context name "${s}" is reserved and cannot be used`
-  )
-);
-
-const validFormat = Schema.String.pipe(
+  ),
   Schema.filter(
     (s) =>
       contextPattern.test(s) ||
       `Context name "${s}" is invalid — use only alphanumeric characters, dots, hyphens, and underscores (e.g. "myapp.dev", "stripe-api.prod")`
-  )
-);
-
-export const ContextName = Schema.compose(
-  Schema.compose(
-    Schema.compose(Schema.compose(nonEmpty, bounded), noPathSeparators),
-    notReserved
   ),
-  validFormat
-).pipe(Schema.brand("ContextName"));
+  Schema.brand("ContextName")
+);
 
 export type ContextName = Schema.Schema.Type<typeof ContextName>;

@@ -128,6 +128,27 @@ envsec -c myapp.dev get api.key --quiet
 envsec -c myapp.dev get api.key -q
 ```
 
+### Delete a secret
+
+```bash
+envsec -c myapp.dev delete api.key
+
+# or use the alias
+envsec -c myapp.dev del api.key
+```
+
+### Rename a secret
+
+Rename a secret key within the same context. The value and expiry metadata are preserved.
+
+```bash
+# Rename a key
+envsec -c myapp.dev rename old.key new.key
+
+# Overwrite target if it already exists
+envsec -c myapp.dev rename old.key existing.key --force
+```
+
 ### List all secrets in a context
 
 ```bash
@@ -151,51 +172,41 @@ envsec -c myapp.dev search "api.*"
 envsec search "myapp.*"
 ```
 
-### Generate a .env file
+### Move secrets between contexts
+
+Move secrets from one context to another. The source secrets are removed after moving.
 
 ```bash
-# Creates .env with all secrets from the context
-envsec -c myapp.dev env-file
+# Move a single secret
+envsec -c myapp.dev move api.token --to myapp.prod
 
-# Specify a custom output path
-envsec -c myapp.dev env-file --output .env.local
+# Move secrets matching a glob pattern
+envsec -c myapp.dev move "redis.*" --to myapp.prod -y
+
+# Move all secrets from one context to another
+envsec -c myapp.dev move --all --to myapp.prod -y
+
+# Overwrite existing secrets in the target context
+envsec -c myapp.dev move "redis.*" --to myapp.prod --force -y
 ```
 
-Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
+### Copy secrets between contexts
 
-### Export secrets as environment variables
+Copy secrets from one context to another. The source secrets remain intact.
 
 ```bash
-# Output export statements for eval (bash/zsh)
-eval $(envsec -c myapp.dev env)
+# Copy a single secret
+envsec -c myapp.dev copy api.token --to myapp.staging
 
-# Specify target shell syntax
-envsec -c myapp.dev env --shell fish
-envsec -c myapp.dev env --shell powershell
+# Copy secrets matching a glob pattern
+envsec -c myapp.dev copy "redis.*" --to myapp.staging -y
 
-# Output unset commands to clean up exported variables
-eval $(envsec -c myapp.dev env --unset)
+# Copy all secrets from one context to another
+envsec -c myapp.dev copy --all --to myapp.staging -y
 
-# Combine shell and unset
-envsec -c myapp.dev env --unset --shell fish
+# Overwrite existing secrets in the target context
+envsec -c myapp.dev copy "redis.*" --to myapp.staging --force -y
 ```
-
-Supported shells: `bash` (default), `zsh`, `fish`, `powershell`. Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`). Output goes to stdout so it can be piped to `eval` or sourced directly — no file is written to disk.
-
-### Load secrets from a .env file
-
-```bash
-# Import secrets from .env into the context
-envsec -c myapp.dev load
-
-# Specify a custom input file
-envsec -c myapp.dev load --input .env.local
-
-# Overwrite existing secrets without warning
-envsec -c myapp.dev load --force
-```
-
-Keys are converted from `UPPER_SNAKE_CASE` to `dotted.lowercase` (e.g. `API_TOKEN` → `api.token`). If a key already exists, it is skipped with a warning unless `--force` (`-f`) is provided.
 
 ### Run a command with secrets
 
@@ -255,6 +266,52 @@ envsec cmd search kubectl -m
 envsec cmd delete deploy
 ```
 
+### Generate a .env file
+
+```bash
+# Creates .env with all secrets from the context
+envsec -c myapp.dev env-file
+
+# Specify a custom output path
+envsec -c myapp.dev env-file --output .env.local
+```
+
+Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`).
+
+### Export secrets as environment variables
+
+```bash
+# Output export statements for eval (bash/zsh)
+eval $(envsec -c myapp.dev env)
+
+# Specify target shell syntax
+envsec -c myapp.dev env --shell fish
+envsec -c myapp.dev env --shell powershell
+
+# Output unset commands to clean up exported variables
+eval $(envsec -c myapp.dev env --unset)
+
+# Combine shell and unset
+envsec -c myapp.dev env --unset --shell fish
+```
+
+Supported shells: `bash` (default), `zsh`, `fish`, `powershell`. Keys are converted to `UPPER_SNAKE_CASE` (e.g. `api.token` → `API_TOKEN`). Output goes to stdout so it can be piped to `eval` or sourced directly — no file is written to disk.
+
+### Load secrets from a .env file
+
+```bash
+# Import secrets from .env into the context
+envsec -c myapp.dev load
+
+# Specify a custom input file
+envsec -c myapp.dev load --input .env.local
+
+# Overwrite existing secrets without warning
+envsec -c myapp.dev load --force
+```
+
+Keys are converted from `UPPER_SNAKE_CASE` to `dotted.lowercase` (e.g. `API_TOKEN` → `api.token`). If a key already exists, it is skipped with a warning unless `--force` (`-f`) is provided.
+
 ### Share secrets (GPG encrypted)
 
 ```bash
@@ -269,15 +326,6 @@ envsec -c myapp.dev --json share --encrypt-to alice@example.com -o secrets.enc
 ```
 
 The recipient can decrypt with `gpg --decrypt secrets.enc` and pipe the result into `envsec load`. By default the encrypted payload uses `.env` format (`KEY="value"`); with `--json` it uses a structured JSON object. Requires GPG to be installed and the recipient's public key to be in your keyring.
-
-### Delete a secret
-
-```bash
-envsec -c myapp.dev delete api.key
-
-# or use the alias
-envsec -c myapp.dev del api.key
-```
 
 ### Audit secrets for expiry
 

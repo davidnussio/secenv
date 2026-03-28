@@ -26,6 +26,11 @@ cleanup_secrets() {
   done
   node "$CLI" -c "test.e2e-all" delete --all -y >/dev/null 2>&1 || true
   node "$CLI" -c "test.e2e-expiry" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-rename" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-move-src" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-move-dst" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-copy-src" delete --all -y >/dev/null 2>&1 || true
+  node "$CLI" -c "test.e2e-copy-dst" delete --all -y >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-echo" >/dev/null 2>&1 || true
   node "$CLI" cmd delete "test-multi" >/dev/null 2>&1 || true
 }
@@ -670,9 +675,230 @@ ec=0
 run_all -c "$CTX_STALE" get stale.secret >/dev/null || ec=$?
 assert_exit "stale: get after cleanup fails" "1" "$ec"
 
-# ─── 17. COMPLETIONS ──────────────────────────────────────────────────────────
+# ─── 17. RENAME ───────────────────────────────────────────────────────────────
 echo ""
-echo "── 17. COMPLETIONS ──"
+echo "── 17. RENAME ──"
+
+CTX_REN="test.e2e-rename"
+
+# Seed secrets
+run_ok -c "$CTX_REN" add old.key -v "rename-value" >/dev/null
+run_ok -c "$CTX_REN" add existing.key -v "existing-value" >/dev/null
+
+# Basic rename
+out=$(run_ok -c "$CTX_REN" rename old.key new.key)
+assert_contains "rename: success" "Renamed" "$out"
+assert_contains "rename: shows old key" "old.key" "$out"
+assert_contains "rename: shows new key" "new.key" "$out"
+
+# Verify value moved
+out=$(run_ok -c "$CTX_REN" get new.key)
+assert_eq "rename: value preserved" "rename-value" "$out"
+
+# Old key should be gone
+ec=0
+run_all -c "$CTX_REN" get old.key >/dev/null || ec=$?
+assert_exit "rename: old key gone" "1" "$ec"
+
+# Rename to existing key without --force should fail
+ec=0
+out=$(run_all -c "$CTX_REN" rename new.key existing.key) || ec=$?
+assert_exit "rename: conflict fails" "1" "$ec"
+assert_contains "rename: conflict message" "already exists" "$out"
+
+# Rename to existing key with --force should succeed
+out=$(run_ok -c "$CTX_REN" rename new.key existing.key -f)
+assert_contains "rename: force success" "Renamed" "$out"
+
+out=$(run_ok -c "$CTX_REN" get existing.key)
+assert_eq "rename: force value" "rename-value" "$out"
+
+# Rename same key should fail
+ec=0
+out=$(run_all -c "$CTX_REN" rename existing.key existing.key) || ec=$?
+assert_exit "rename: same key fails" "1" "$ec"
+
+# JSON output
+run_ok -c "$CTX_REN" add json.test -v "json-val" >/dev/null
+out=$(run_ok -c "$CTX_REN" --json rename json.test json.renamed)
+assert_contains "rename json: action" '"rename"' "$out"
+assert_contains "rename json: from" '"json.test"' "$out"
+assert_contains "rename json: to" '"json.renamed"' "$out"
+
+# Clean up
+run_ok -c "$CTX_REN" delete --all -y >/dev/null || true
+
+# ─── 18. MOVE ─────────────────────────────────────────────────────────────────
+echo ""
+echo "── 18. MOVE ──"
+
+CTX_MSRC="test.e2e-move-src"
+CTX_MDST="test.e2e-move-dst"
+
+# Seed source context
+run_ok -c "$CTX_MSRC" add redis.host -v "localhost" >/dev/null
+run_ok -c "$CTX_MSRC" add redis.port -v "6379" >/dev/null
+run_ok -c "$CTX_MSRC" add redis.password -v "r3d1s" >/dev/null
+run_ok -c "$CTX_MSRC" add api.token -v "tok_move" >/dev/null
+
+# Move single key
+out=$(run_ok -c "$CTX_MSRC" move api.token --to "$CTX_MDST")
+assert_contains "move single: success" "Moved" "$out"
+assert_contains "move single: count" "1 secret" "$out"
+
+# Verify moved
+out=$(run_ok -c "$CTX_MDST" get api.token)
+assert_eq "move single: value in target" "tok_move" "$out"
+
+# Source should not have it
+ec=0
+run_all -c "$CTX_MSRC" get api.token >/dev/null || ec=$?
+assert_exit "move single: gone from source" "1" "$ec"
+
+# Move with glob pattern (redis.*)
+out=$(run_ok -c "$CTX_MSRC" move "redis.*" --to "$CTX_MDST" -y)
+assert_contains "move glob: success" "Moved" "$out"
+assert_contains "move glob: count" "3 secrets" "$out"
+
+# Verify all redis keys moved
+out=$(run_ok -c "$CTX_MDST" get redis.host)
+assert_eq "move glob: redis.host" "localhost" "$out"
+out=$(run_ok -c "$CTX_MDST" get redis.port)
+assert_eq "move glob: redis.port" "6379" "$out"
+out=$(run_ok -c "$CTX_MDST" get redis.password)
+assert_eq "move glob: redis.password" "r3d1s" "$out"
+
+# Source should be empty
+out=$(run_ok -c "$CTX_MSRC" list || true)
+assert_contains "move glob: source empty" "No secrets" "$out"
+
+# Move with --all
+run_ok -c "$CTX_MSRC" add new.one -v "v1" >/dev/null
+run_ok -c "$CTX_MSRC" add new.two -v "v2" >/dev/null
+
+# Clean target first to avoid conflicts
+run_ok -c "$CTX_MDST" delete --all -y >/dev/null || true
+
+out=$(run_ok -c "$CTX_MSRC" move --all --to "$CTX_MDST" -y)
+assert_contains "move all: success" "Moved" "$out"
+assert_contains "move all: count" "2 secrets" "$out"
+
+# Conflict detection
+run_ok -c "$CTX_MSRC" add conflict.key -v "src-val" >/dev/null
+run_ok -c "$CTX_MDST" add conflict.key -v "dst-val" >/dev/null
+
+ec=0
+out=$(run_all -c "$CTX_MSRC" move conflict.key --to "$CTX_MDST") || ec=$?
+assert_exit "move conflict: fails" "1" "$ec"
+assert_contains "move conflict: message" "already has" "$out"
+
+# Move with --force overwrites
+out=$(run_ok -c "$CTX_MSRC" move conflict.key --to "$CTX_MDST" -f)
+assert_contains "move force: success" "Moved" "$out"
+
+out=$(run_ok -c "$CTX_MDST" get conflict.key)
+assert_eq "move force: value overwritten" "src-val" "$out"
+
+# Same context should fail
+run_ok -c "$CTX_MSRC" add same.ctx -v "val" >/dev/null
+ec=0
+out=$(run_all -c "$CTX_MSRC" move same.ctx --to "$CTX_MSRC") || ec=$?
+assert_exit "move same ctx: fails" "1" "$ec"
+
+# JSON output
+run_ok -c "$CTX_MSRC" add json.move -v "jval" >/dev/null
+run_ok -c "$CTX_MDST" delete -y json.move >/dev/null 2>&1 || true
+out=$(run_ok -c "$CTX_MSRC" --json move json.move --to "$CTX_MDST")
+assert_contains "move json: action" '"move"' "$out"
+assert_contains "move json: from" "$CTX_MSRC" "$out"
+assert_contains "move json: to" "$CTX_MDST" "$out"
+
+# Clean up
+run_ok -c "$CTX_MSRC" delete --all -y >/dev/null || true
+run_ok -c "$CTX_MDST" delete --all -y >/dev/null || true
+
+# ─── 19. COPY ─────────────────────────────────────────────────────────────────
+echo ""
+echo "── 19. COPY ──"
+
+CTX_CSRC="test.e2e-copy-src"
+CTX_CDST="test.e2e-copy-dst"
+
+# Seed source context
+run_ok -c "$CTX_CSRC" add redis.host -v "localhost" >/dev/null
+run_ok -c "$CTX_CSRC" add redis.port -v "6379" >/dev/null
+run_ok -c "$CTX_CSRC" add redis.password -v "r3d1s" >/dev/null
+run_ok -c "$CTX_CSRC" add api.token -v "tok_copy" >/dev/null
+
+# Copy single key
+out=$(run_ok -c "$CTX_CSRC" copy api.token --to "$CTX_CDST")
+assert_contains "copy single: success" "Copied" "$out"
+assert_contains "copy single: count" "1 secret" "$out"
+
+# Verify copied
+out=$(run_ok -c "$CTX_CDST" get api.token)
+assert_eq "copy single: value in target" "tok_copy" "$out"
+
+# Source should still have it (unlike move)
+out=$(run_ok -c "$CTX_CSRC" get api.token)
+assert_eq "copy single: source intact" "tok_copy" "$out"
+
+# Copy with glob pattern (redis.*)
+out=$(run_ok -c "$CTX_CSRC" copy "redis.*" --to "$CTX_CDST" -y)
+assert_contains "copy glob: success" "Copied" "$out"
+assert_contains "copy glob: count" "3 secrets" "$out"
+
+# Verify all redis keys copied
+out=$(run_ok -c "$CTX_CDST" get redis.host)
+assert_eq "copy glob: redis.host" "localhost" "$out"
+out=$(run_ok -c "$CTX_CDST" get redis.password)
+assert_eq "copy glob: redis.password" "r3d1s" "$out"
+
+# Source still has everything
+out=$(run_ok -c "$CTX_CSRC" list)
+assert_contains "copy glob: source has redis.host" "redis.host" "$out"
+assert_contains "copy glob: source has api.token" "api.token" "$out"
+
+# Copy with --all
+run_ok -c "$CTX_CDST" delete --all -y >/dev/null || true
+out=$(run_ok -c "$CTX_CSRC" copy --all --to "$CTX_CDST" -y)
+assert_contains "copy all: success" "Copied" "$out"
+assert_contains "copy all: count" "4 secrets" "$out"
+
+# Conflict detection
+ec=0
+out=$(run_all -c "$CTX_CSRC" copy api.token --to "$CTX_CDST") || ec=$?
+assert_exit "copy conflict: fails" "1" "$ec"
+assert_contains "copy conflict: message" "already has" "$out"
+
+# Copy with --force overwrites
+run_ok -c "$CTX_CSRC" add api.token -v "updated-tok" >/dev/null
+out=$(run_ok -c "$CTX_CSRC" copy api.token --to "$CTX_CDST" -f)
+assert_contains "copy force: success" "Copied" "$out"
+
+out=$(run_ok -c "$CTX_CDST" get api.token)
+assert_eq "copy force: value overwritten" "updated-tok" "$out"
+
+# Same context should fail
+ec=0
+out=$(run_all -c "$CTX_CSRC" copy api.token --to "$CTX_CSRC") || ec=$?
+assert_exit "copy same ctx: fails" "1" "$ec"
+
+# JSON output
+run_ok -c "$CTX_CDST" delete -y json.copy >/dev/null 2>&1 || true
+run_ok -c "$CTX_CSRC" add json.copy -v "jval" >/dev/null
+out=$(run_ok -c "$CTX_CSRC" --json copy json.copy --to "$CTX_CDST")
+assert_contains "copy json: action" '"copy"' "$out"
+assert_contains "copy json: from" "$CTX_CSRC" "$out"
+assert_contains "copy json: to" "$CTX_CDST" "$out"
+
+# Clean up
+run_ok -c "$CTX_CSRC" delete --all -y >/dev/null || true
+run_ok -c "$CTX_CDST" delete --all -y >/dev/null || true
+
+# ─── 20. COMPLETIONS ──────────────────────────────────────────────────────────
+echo ""
+echo "── 20. COMPLETIONS ──"
 
 # __complete contexts should list test.e2e context (we still have secrets)
 out=$(node "$CLI" __complete contexts 2>/dev/null)
@@ -707,9 +933,9 @@ out=$(node "$CLI" --completions fish 2>/dev/null)
 assert_contains "completions fish: complete" "complete -c envsec" "$out"
 assert_contains "completions fish: __complete" "__complete" "$out"
 
-# ─── 18. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 21. CLEANUP & VERIFY ────────────────────────────────────────────────────
 echo ""
-echo "── 18. CLEANUP ──"
+echo "── 21. CLEANUP ──"
 
 for key in db.password api.token special.emoji special.utf8; do
   run_ok -c "$CTX" delete -y "$key" >/dev/null || true

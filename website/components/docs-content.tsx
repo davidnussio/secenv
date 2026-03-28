@@ -75,6 +75,22 @@ envsec -c myapp.dev list
 # Run a command with secret interpolation
 envsec -c myapp.dev run 'curl -H "Auth: {api.key}" https://api.example.com'`}
         />
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+          <span aria-hidden="true" className="shrink-0 text-emerald-400">
+            ℹ
+          </span>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Set up{" "}
+            <a
+              className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+              href="#shell-completions"
+            >
+              shell completions
+            </a>{" "}
+            and unlock the full power of tab. It&apos;s over 9000 times better —
+            trust us, your fingers will thank you.
+          </p>
+        </div>
       </Section>
 
       <Section id="requirements">
@@ -144,6 +160,35 @@ envsec -c myapp.dev get api.key -q`}
         </P>
       </Section>
 
+      <Section id="delete">
+        <H2>envsec delete</H2>
+        <P>Remove a secret from the credential store.</P>
+        <CodeBlock
+          code={`envsec -c myapp.dev delete api.key
+
+# Skip confirmation prompt
+envsec -c myapp.dev delete api.key --yes
+
+# Alias
+envsec -c myapp.dev del api.key`}
+        />
+      </Section>
+
+      <Section id="rename">
+        <H2>envsec rename</H2>
+        <P>
+          Rename a secret key within the same context. The value and expiry
+          metadata are preserved.
+        </P>
+        <CodeBlock
+          code={`# Rename a key
+envsec -c myapp.dev rename old.key new.key
+
+# Overwrite target if it already exists
+envsec -c myapp.dev rename old.key existing.key --force`}
+        />
+      </Section>
+
       <Section id="list">
         <H2>envsec list</H2>
         <P>List all secrets in a context, or list all contexts.</P>
@@ -168,17 +213,45 @@ envsec search "myapp.*"`}
         />
       </Section>
 
-      <Section id="delete">
-        <H2>envsec delete</H2>
-        <P>Remove a secret from the credential store.</P>
+      <Section id="move">
+        <H2>envsec move</H2>
+        <P>
+          Move secrets from one context to another. The source secrets are
+          removed after moving.
+        </P>
         <CodeBlock
-          code={`envsec -c myapp.dev delete api.key
+          code={`# Move a single secret
+envsec -c myapp.dev move api.token --to myapp.prod
 
-# Skip confirmation prompt
-envsec -c myapp.dev delete api.key --yes
+# Move secrets matching a glob pattern
+envsec -c myapp.dev move "redis.*" --to myapp.prod -y
 
-# Alias
-envsec -c myapp.dev del api.key`}
+# Move all secrets from one context to another
+envsec -c myapp.dev move --all --to myapp.prod -y
+
+# Overwrite existing secrets in the target context
+envsec -c myapp.dev move "redis.*" --to myapp.prod --force -y`}
+        />
+      </Section>
+
+      <Section id="copy">
+        <H2>envsec copy</H2>
+        <P>
+          Copy secrets from one context to another. The source secrets remain
+          intact.
+        </P>
+        <CodeBlock
+          code={`# Copy a single secret
+envsec -c myapp.dev copy api.token --to myapp.staging
+
+# Copy secrets matching a glob pattern
+envsec -c myapp.dev copy "redis.*" --to myapp.staging -y
+
+# Copy all secrets from one context to another
+envsec -c myapp.dev copy --all --to myapp.staging -y
+
+# Overwrite existing secrets in the target context
+envsec -c myapp.dev copy "redis.*" --to myapp.staging --force -y`}
         />
       </Section>
 
@@ -223,6 +296,18 @@ envsec cmd delete deploy`}
         />
       </Section>
 
+      <Section id="env-file">
+        <H2>envsec env-file</H2>
+        <P>Export secrets to a .env file.</P>
+        <CodeBlock
+          code={`# Default output: .env
+envsec -c myapp.dev env-file
+
+# Custom output path
+envsec -c myapp.dev env-file --output .env.local`}
+        />
+      </Section>
+
       <Section id="env">
         <H2>envsec env</H2>
         <P>Export secrets as shell environment variable statements.</P>
@@ -245,18 +330,6 @@ eval $(envsec -c myapp.dev env --unset)`}
         </P>
       </Section>
 
-      <Section id="env-file">
-        <H2>envsec env-file</H2>
-        <P>Export secrets to a .env file.</P>
-        <CodeBlock
-          code={`# Default output: .env
-envsec -c myapp.dev env-file
-
-# Custom output path
-envsec -c myapp.dev env-file --output .env.local`}
-        />
-      </Section>
-
       <Section id="load">
         <H2>envsec load</H2>
         <P>Import secrets from a .env file into a context.</P>
@@ -270,6 +343,25 @@ envsec -c myapp.dev load --input .env.local
 # Overwrite existing secrets
 envsec -c myapp.dev load --force`}
         />
+      </Section>
+
+      <Section id="share">
+        <H2>envsec share</H2>
+        <P>Encrypt secrets with GPG for team sharing.</P>
+        <CodeBlock
+          code={`# Encrypt for a team member
+envsec -c myapp.dev share --encrypt-to [email]
+
+# Save to file
+envsec -c myapp.dev share --encrypt-to [email] -o secrets.enc
+
+# JSON format inside encrypted payload
+envsec -c myapp.dev --json share --encrypt-to [email] -o secrets.enc`}
+        />
+        <P>
+          The recipient decrypts with <Mono>gpg --decrypt secrets.enc</Mono> and
+          pipes the result into <Mono>envsec load</Mono>.
+        </P>
       </Section>
 
       <Section id="audit">
@@ -291,25 +383,6 @@ envsec audit
 # JSON output
 envsec -c myapp.dev audit --json`}
         />
-      </Section>
-
-      <Section id="share">
-        <H2>envsec share</H2>
-        <P>Encrypt secrets with GPG for team sharing.</P>
-        <CodeBlock
-          code={`# Encrypt for a team member
-envsec -c myapp.dev share --encrypt-to [email]
-
-# Save to file
-envsec -c myapp.dev share --encrypt-to [email] -o secrets.enc
-
-# JSON format inside encrypted payload
-envsec -c myapp.dev --json share --encrypt-to [email] -o secrets.enc`}
-        />
-        <P>
-          The recipient decrypts with <Mono>gpg --decrypt secrets.enc</Mono> and
-          pipes the result into <Mono>envsec load</Mono>.
-        </P>
       </Section>
 
       {/* Configuration */}
@@ -348,6 +421,15 @@ envsec -c myapp.dev list`}
       <Section id="shell-completions">
         <H2>Shell Completions</H2>
         <P>Tab completion for bash, zsh, fish, and sh.</P>
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+          <span aria-hidden="true" className="shrink-0 text-emerald-400">
+            ℹ
+          </span>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Installed via Homebrew? Shell completions are configured
+            automatically — you&apos;re already good to go.
+          </p>
+        </div>
         <CodeBlock
           code={`# Bash (add to ~/.bashrc)
 eval "$(envsec --completions bash)"

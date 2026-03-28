@@ -35,15 +35,15 @@ export function Navbar() {
           </Link>
           <Link
             className="text-muted-foreground text-sm transition-colors hover:text-foreground"
-            href="/#install"
-          >
-            Install
-          </Link>
-          <Link
-            className="text-muted-foreground text-sm transition-colors hover:text-foreground"
             href="/#use-cases"
           >
             Use Cases
+          </Link>
+          <Link
+            className="text-muted-foreground text-sm transition-colors hover:text-foreground"
+            href="/#install"
+          >
+            Install
           </Link>
           <Link
             className="text-muted-foreground text-sm transition-colors hover:text-foreground"
@@ -97,17 +97,17 @@ export function Navbar() {
             </Link>
             <Link
               className="text-muted-foreground text-sm"
-              href="/#install"
-              onClick={() => setMobileOpen(false)}
-            >
-              Install
-            </Link>
-            <Link
-              className="text-muted-foreground text-sm"
               href="/#use-cases"
               onClick={() => setMobileOpen(false)}
             >
               Use Cases
+            </Link>
+            <Link
+              className="text-muted-foreground text-sm"
+              href="/#install"
+              onClick={() => setMobileOpen(false)}
+            >
+              Install
             </Link>
             <Link
               className="text-muted-foreground text-sm"

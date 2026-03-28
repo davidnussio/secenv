@@ -59,14 +59,17 @@ const persist = (db: Database, dbPath: string) => {
 
 const make = Effect.gen(function* () {
   const { path: dbPath } = yield* DatabaseConfig;
-  const db = yield* Effect.tryPromise({
-    try: () => initDb(dbPath),
-    catch: (error) =>
-      new MetadataStoreError({
-        operation: "init",
-        message: `Failed to initialize database: ${error}`,
-      }),
-  });
+  const db = yield* Effect.acquireRelease(
+    Effect.tryPromise({
+      try: () => initDb(dbPath),
+      catch: (error) =>
+        new MetadataStoreError({
+          operation: "init",
+          message: `Failed to initialize database: ${error}`,
+        }),
+    }),
+    (db) => Effect.sync(() => db.close())
+  );
   let batching = false;
   let dirty = false;
   const maybePersist = () => {
@@ -530,4 +533,4 @@ const make = Effect.gen(function* () {
   });
 });
 
-export const SqliteMetadataStoreLive = Layer.effect(MetadataStore, make);
+export const SqliteMetadataStoreLive = Layer.scoped(MetadataStore, make);
