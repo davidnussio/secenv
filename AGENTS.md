@@ -122,6 +122,16 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
 
+## CLI Icons
+
+All CLI output icons are centralized in `src/ui.ts` via the `icons` object. When adding or modifying CLI output:
+
+- Import icons from `src/ui.ts` — never hardcode symbols or emoji inline
+- Use clean geometric Unicode glyphs (▸ ◆ ● ◎ etc.) — no emoji (🔑 📁 🔒 etc.)
+- Emoji render inconsistently across terminals and break monospace alignment
+- Each icon must be wrapped with its semantic color function (e.g. `green("✔")`, `red("✖")`)
+- When adding a new icon, add it to the `icons` object in `src/ui.ts` with a comment noting the Unicode codepoint
+
 ## Language
 
 Write code and comment in English
