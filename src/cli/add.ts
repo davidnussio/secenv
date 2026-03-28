@@ -1,6 +1,10 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Console, Effect, Option } from "effect";
-import { expiresAtFromNow, parseDuration } from "../domain/duration.js";
+import {
+  expiresAtFromNow,
+  formatLocalDateTime,
+  parseDuration,
+} from "../domain/duration.js";
 import { AbortedError, EmptyValueError } from "../errors.js";
 import { SecretStore } from "../services/secret-store.js";
 import { bold, icons, label } from "../ui.js";
@@ -110,7 +114,7 @@ export const addCommand = Command.make(
       );
       if (expiresAt) {
         yield* Console.log(
-          `  ${icons.clock} ${label("expires", `${expiresAt} UTC`)}`
+          `  ${icons.clock} ${label("expires", formatLocalDateTime(expiresAt))}`
         );
       }
     })

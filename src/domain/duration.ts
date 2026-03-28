@@ -92,6 +92,18 @@ export const expiresAtFromNow = (duration: Duration.Duration): string => {
 };
 
 /**
+ * Convert a UTC datetime string (as stored in the DB) to a local datetime string
+ * using the system timezone. The input is expected to be "YYYY-MM-DD HH:mm:ss" in UTC.
+ */
+export const formatLocalDateTime = (utcDate: string): string => {
+  const d = new Date(`${utcDate}Z`);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${date} ${time}`;
+};
+
+/**
  * Format a human-readable "time remaining" or "time ago" string from an ISO datetime.
  */
 export const formatTimeDistance = (isoDate: string): string => {
