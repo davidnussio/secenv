@@ -83,5 +83,5 @@
 ### Developer Experience
 - [ ] `envsec init` — interactive setup wizard that creates `.envsec.json` in the current project, sets up context, and optionally installs shell hooks
 - [x] Add summary count line when listing secrets with `--context`ermissions, missing tools like `secret-tool` on Linux)
-- [x] `envsec completion <shell>` — generate shell completion scripts for bash, zsh, fish
+- [x] `envsec completion <shell>` — generate shell completion scripts for bash, zsh, fish (with dynamic context/key/command completions)
 - [ ] `envsec history -c <ctx> <key>` — show when a secret was created, last updated (from metadata timestamps)

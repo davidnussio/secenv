@@ -661,9 +661,46 @@ ec=0
 run_all -c "$CTX_STALE" get stale.secret >/dev/null || ec=$?
 assert_exit "stale: get after cleanup fails" "1" "$ec"
 
-# ─── 17. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 17. COMPLETIONS ──────────────────────────────────────────────────────────
 echo ""
-echo "── 17. CLEANUP ──"
+echo "── 17. COMPLETIONS ──"
+
+# __complete contexts should list test.e2e context (we still have secrets)
+out=$(node "$CLI" __complete contexts 2>/dev/null)
+assert_contains "complete contexts: test.e2e" "$CTX" "$out"
+
+# __complete keys should list keys for the context
+out=$(node "$CLI" __complete keys "$CTX" 2>/dev/null)
+assert_contains "complete keys: db.password" "db.password" "$out"
+
+# __complete commands should work (may be empty, just check exit code)
+ec=0
+node "$CLI" __complete commands >/dev/null 2>&1 || ec=$?
+assert_exit "complete commands: exit 0" "0" "$ec"
+
+# __complete unknown type should exit silently
+ec=0
+node "$CLI" __complete unknown >/dev/null 2>&1 || ec=$?
+assert_exit "complete unknown: exit 0" "0" "$ec"
+
+# --completions bash should output completion script
+out=$(node "$CLI" --completions bash 2>/dev/null)
+assert_contains "completions bash: function" "_envsec_completions" "$out"
+assert_contains "completions bash: __complete" "__complete" "$out"
+
+# --completions zsh should output completion script
+out=$(node "$CLI" --completions zsh 2>/dev/null)
+assert_contains "completions zsh: compdef" "#compdef" "$out"
+assert_contains "completions zsh: __complete" "__complete" "$out"
+
+# --completions fish should output completion script
+out=$(node "$CLI" --completions fish 2>/dev/null)
+assert_contains "completions fish: complete" "complete -c envsec" "$out"
+assert_contains "completions fish: __complete" "__complete" "$out"
+
+# ─── 18. CLEANUP & VERIFY ────────────────────────────────────────────────────
+echo ""
+echo "── 18. CLEANUP ──"
 
 for key in db.password api.token; do
   run_ok -c "$CTX" delete -y "$key" >/dev/null || true

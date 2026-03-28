@@ -304,7 +304,7 @@ The `audit` command also tracks generated `.env` files. Every time `env-file` is
 
 ### Shell completions
 
-envsec supports tab completion for bash, zsh, fish, and sh.
+envsec supports dynamic tab completion for bash, zsh, and fish. Completions are context-aware: they suggest your actual context names, secret keys, and saved command names in real time by querying the metadata database.
 
 ```bash
 # Bash (add to ~/.bashrc)
@@ -316,6 +316,13 @@ eval "$(envsec --completions zsh)"
 # Fish (add to ~/.config/fish/config.fish)
 envsec --completions fish | source
 ```
+
+What gets completed dynamically:
+- `--context` / `-c` — lists all your contexts
+- Secret key arguments (`get`, `add`, `delete`) — lists keys for the current context
+- `cmd run` / `cmd delete` — lists saved command names
+- `--override-context` / `-o` — lists contexts for `cmd run`
+- Subcommands, flags, and static choices (shells, etc.) are also completed
 
 ## How it works
 
