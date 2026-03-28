@@ -1,14 +1,16 @@
 import { Console, Effect } from "effect";
+import { refreshCache } from "../services/completion-cache.js";
 import { SecretStore } from "../services/secret-store.js";
 
 /**
- * Handle `__complete <type> [arg]` — hidden completion helper.
- * Called by shell completion scripts to fetch dynamic values.
- * Silently succeeds with no output on any error.
+ * Handle `__complete <type> [arg]` — slow path.
+ * Called when the cache is missing, stale, or doesn't have the requested data.
+ * Queries SecretStore directly and rebuilds the cache.
  */
 export const handleComplete = (
   type: string,
-  arg?: string
+  arg: string | undefined,
+  cachePath: string
 ): Effect.Effect<void, never, SecretStore> =>
   Effect.gen(function* () {
     switch (type) {
@@ -39,4 +41,7 @@ export const handleComplete = (
       default:
         break;
     }
+
+    // Rebuild cache after slow path query
+    yield* refreshCache(cachePath);
   }).pipe(Effect.catchAll(() => Effect.void));
