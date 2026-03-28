@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import { Console, Effect, Layer } from "effect";
+import { Cause, Console, Effect, Layer } from "effect";
 import { addCommand } from "./cli/add.js";
 import { auditCommand } from "./cli/audit.js";
 import { cmdCommand } from "./cli/cmd.js";
@@ -23,6 +23,7 @@ import {
   DatabaseConfigFrom,
 } from "./services/database-config.js";
 import { SecretStore } from "./services/secret-store.js";
+import { dim, icons, red } from "./ui.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -81,6 +82,69 @@ const isMutatingCommand = (): boolean => {
   return args.some((a) => MUTATING_COMMANDS.has(a));
 };
 
+/** Check if --debug flag is present in argv. */
+const isDebugMode = (): boolean => {
+  const args = process.argv.slice(2);
+  return args.includes("--debug") || args.includes("-d");
+};
+
+/**
+ * Extract a user-friendly message from an Effect Cause.
+ * Returns undefined if the cause doesn't contain a known tagged error.
+ */
+const extractErrorMessage = (
+  cause: Cause.Cause<unknown>
+): string | undefined => {
+  const failures = Cause.failures(cause);
+  for (const err of failures) {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "_tag" in err &&
+      "message" in err &&
+      typeof (err as { message: unknown }).message === "string"
+    ) {
+      return (err as { message: string }).message;
+    }
+  }
+
+  const defects = Cause.defects(cause);
+  for (const d of defects) {
+    if (d instanceof Error) {
+      return d.message;
+    }
+  }
+
+  return undefined;
+};
+
+/**
+ * Wrap an effect with user-friendly error handling.
+ * In normal mode, prints a clean one-line error and exits.
+ * In debug mode (--debug), falls through to the default Effect error output.
+ */
+const withUserErrors = <A, E, R>(
+  effect: Effect.Effect<A, E, R>
+): Effect.Effect<A, E, R> => {
+  if (isDebugMode()) {
+    return effect;
+  }
+  return effect.pipe(
+    Effect.tapErrorCause((cause) =>
+      Effect.sync(() => {
+        const msg = extractErrorMessage(cause);
+        if (msg) {
+          process.stderr.write(`${icons.error} ${red(msg)}\n`);
+          process.stderr.write(
+            `${dim("  Run with --debug for full error details")}\n`
+          );
+          process.exit(1);
+        }
+      })
+    )
+  );
+};
+
 export const runCli = (
   customDbPath: string | undefined,
   cachePath: string
@@ -113,7 +177,7 @@ export const runCli = (
     ? cli(process.argv).pipe(Effect.tap(() => refreshCache(cachePath)))
     : cli(process.argv);
 
-  program.pipe(
+  withUserErrors(program).pipe(
     Effect.provide(secretStoreLayer),
     Effect.provide(NodeContext.layer),
     NodeRuntime.runMain
