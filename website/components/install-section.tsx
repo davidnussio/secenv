@@ -30,7 +30,7 @@ export function InstallSection() {
             Ready in seconds
           </h2>
           <p className="mb-10 text-lg text-muted-foreground">
-            One command. No config. Node.js 20+ required.
+            One command. No config. Node.js 22+ required.
           </p>
         </div>
 

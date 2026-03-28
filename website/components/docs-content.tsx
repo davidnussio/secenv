@@ -48,7 +48,7 @@ export function DocsContent() {
           code={"brew tap davidnussio/homebrew-tap\nbrew install envsec"}
         />
         <H3>npm</H3>
-        <P>Requires Node.js 20 or later.</P>
+        <P>Requires Node.js 22 or later.</P>
         <CodeBlock code="npm install -g envsec" />
         <P>Or run directly without installing:</P>
         <CodeBlock code="npx envsec" />

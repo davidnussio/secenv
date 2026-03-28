@@ -24,7 +24,7 @@ Secure environment secrets management using native OS credential stores.
 
 ## Requirements
 
-- Node.js >= 20
+- Node.js >= 22
 
 ### macOS
 
@@ -424,7 +424,7 @@ We believe in being upfront about what envsec does not yet cover. These are real
 
 ### Prerequisites
 
-- Node.js >= 20
+- Node.js >= 24
 - pnpm
 
 ### Setup
