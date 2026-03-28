@@ -1,4 +1,4 @@
-import { Duration, Effect } from "effect";
+import { DateTime, Duration, Effect } from "effect";
 import { InvalidDurationError } from "../errors.js";
 
 /**
@@ -81,25 +81,28 @@ export const parseDuration = Effect.fn("parseDuration")(function* (
 
 /**
  * Compute an ISO datetime string (UTC, no timezone suffix) for `now + duration`.
+ * Format: "YYYY-MM-DD HH:mm:ss" (compatible with SQLite text comparison).
  */
 export const expiresAtFromNow = (duration: Duration.Duration): string => {
-  const ms = Duration.toMillis(duration);
-  const date = new Date(Date.now() + ms);
-  return date.toISOString().replace("T", " ").replace("Z", "").slice(0, 19);
+  const future = DateTime.addDuration(DateTime.unsafeNow(), duration);
+  return DateTime.formatIso(future)
+    .replace("T", " ")
+    .replace("Z", "")
+    .slice(0, 19);
 };
 
 /**
  * Format a human-readable "time remaining" or "time ago" string from an ISO datetime.
  */
 export const formatTimeDistance = (isoDate: string): string => {
-  const target = new Date(`${isoDate}Z`).getTime();
-  const now = Date.now();
-  const diff = Duration.millis(Math.abs(target - now));
-  const past = target < now;
+  const now = DateTime.unsafeNow();
+  const target = DateTime.unsafeMake(`${isoDate}Z`);
+  const diffMs = Math.abs(DateTime.distance(now, target));
+  const past = DateTime.lessThan(target, now);
 
-  const totalMinutes = Math.floor(Duration.toMillis(diff) / (60 * 1000));
-  const totalHours = Math.floor(Duration.toMillis(diff) / (60 * 60 * 1000));
-  const totalDays = Math.floor(Duration.toMillis(diff) / (24 * 60 * 60 * 1000));
+  const totalMinutes = Math.floor(diffMs / (60 * 1000));
+  const totalHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const totalDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
 
   let label: string;
   if (totalDays > 0) {
