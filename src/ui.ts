@@ -30,32 +30,32 @@ export const dim = ansi("2");
 export const bold = ansi("1");
 export const white = ansi("37");
 
-// ── Icons (Unicode only — no Nerd Fonts required) ───────────────────
+// ── Icons (clean Unicode — no emoji, no Nerd Fonts) ─────────────────
 export const icons = {
   success: green("✔"), // U+2714
   error: red("✖"), // U+2716
-  warning: yellow("⚠"), // U+26A0
-  info: blue("ℹ"), // U+2139
-  key: yellow("🔑"), // U+1F511
-  lock: green("🔒"), // U+1F512
-  unlock: red("🔓"), // U+1F513
-  search: blue("🔍"), // U+1F50D
-  folder: blue("📁"), // U+1F4C1
-  file: cyan("📄"), // U+1F4C4
-  clock: yellow("🕐"), // U+1F550
-  expired: red("⏰"), // U+23F0
-  trash: red("🗑"), // U+1F5D1
-  save: green("💾"), // U+1F4BE
-  download: cyan("⬇"), // U+2B07
-  upload: magenta("⬆"), // U+2B06
-  shield: green("🛡"), // U+1F6E1
-  chart: blue("📊"), // U+1F4CA
-  bolt: yellow("⚡"), // U+26A1
+  warning: yellow("▲"), // U+25B2
+  info: blue("●"), // U+25CF
+  key: yellow("◆"), // U+25C6
+  lock: green("■"), // U+25A0
+  unlock: red("□"), // U+25A1
+  search: blue("◎"), // U+25CE
+  folder: blue("▸"), // U+25B8
+  file: cyan("·"), // U+00B7
+  clock: yellow("◔"), // U+25D4
+  expired: red("✖"), // U+2716
+  trash: red("×"), // U+00D7
+  save: green("↓"), // U+2193
+  download: cyan("↓"), // U+2193
+  upload: magenta("↑"), // U+2191
+  shield: green("◈"), // U+25C8
+  chart: blue("▪"), // U+25AA
+  bolt: yellow("›"), // U+203A
   empty: dim("∅"), // U+2205
   arrow: dim("→"), // U+2192
-  check: green("✅"), // U+2705
+  check: green("✔"), // U+2714
   cancel: dim("⊘"), // U+2298
-  broom: yellow("🧹"), // U+1F9F9
+  broom: yellow("~"), // tilde
   env: cyan("$"), // env var
 } as const;
 

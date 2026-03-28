@@ -106,6 +106,16 @@ bun --hot ./index.ts
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
 
 
+## CLI Icons
+
+All CLI output icons are centralized in `src/ui.ts` via the `icons` object. When adding or modifying CLI output:
+
+- Import icons from `src/ui.ts` — never hardcode symbols or emoji inline
+- Use clean geometric Unicode glyphs (▸ ◆ ● ◎ etc.) — no emoji (🔑 📁 🔒 etc.)
+- Emoji render inconsistently across terminals and break monospace alignment
+- Each icon must be wrapped with its semantic color function (e.g. `green("✔")`, `red("✖")`)
+- When adding a new icon, add it to the `icons` object in `src/ui.ts` with a comment noting the Unicode codepoint
+
 ## Effect libraries
 
 check this out for more info:
