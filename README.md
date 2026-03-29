@@ -350,6 +350,26 @@ Secrets with an `--expires` duration set via `envsec add` are tracked in metadat
 
 The `audit` command also tracks generated `.env` files. Every time `env-file` is used, the output path, context, and timestamp are recorded. The audit output includes a second section listing these files. If a tracked `.env` file no longer exists on disk, audit automatically removes it from the metadata and reports the cleanup.
 
+### Diagnose your setup
+
+```bash
+# Run all health checks
+envsec doctor
+
+# JSON output for scripting
+envsec --json doctor
+```
+
+The `doctor` command verifies your envsec installation is working correctly. It checks:
+- Platform support and Node.js version
+- Credential store availability (macOS Keychain, Linux secret-tool, Windows cmdkey)
+- Keychain read/write access
+- Database path, permissions, and schema integrity
+- Orphaned secrets (metadata without keychain entry)
+- Expired secrets
+- Environment variables (`ENVSEC_DB`, `ENVSEC_CONTEXT`)
+- Current shell
+
 ### Shell completions
 
 envsec supports dynamic tab completion for bash, zsh, and fish. Completions are context-aware: they suggest your actual context names, secret keys, and saved command names in real time by querying the metadata database.

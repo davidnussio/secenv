@@ -1,6 +1,6 @@
 {
   "name": "envsec",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.8",
   "description": "Secure environment secrets management using native OS credential stores",
   "type": "module",
   "bin": {

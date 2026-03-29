@@ -22,6 +22,7 @@ const runPowerShell = (script: string) =>
     execFile(
       "powershell.exe",
       ["-NoProfile", "-NonInteractive", "-Command", script],
+      { maxBuffer: 1 * 1024 * 1024 }, // 1MB buffer for large scripts
       (error, stdout, stderr) => {
         if (error && "code" in error && error.code === "ENOENT") {
           resume(

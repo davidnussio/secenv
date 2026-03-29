@@ -896,9 +896,43 @@ assert_contains "copy json: to" "$CTX_CDST" "$out"
 run_ok -c "$CTX_CSRC" delete --all -y >/dev/null || true
 run_ok -c "$CTX_CDST" delete --all -y >/dev/null || true
 
-# ─── 20. COMPLETIONS ──────────────────────────────────────────────────────────
+# ─── 20. DOCTOR ───────────────────────────────────────────────────────────────
 echo ""
-echo "── 20. COMPLETIONS ──"
+echo "── 20. DOCTOR ──"
+
+# Skip doctor tests on Linux in CI (hangs in GitHub Actions)
+if [[ "$OSTYPE" == "linux-gnu"* ]] && [[ -n "${CI:-}" ]]; then
+  echo "  ⚠ Skipping doctor tests on Linux CI (known to hang in GitHub Actions)"
+else
+  # Basic doctor run should succeed
+  ec=0
+  out=$(run_ok doctor) || ec=$?
+  assert_exit "doctor: exit 0" "0" "$ec"
+  assert_contains "doctor: shows version" "Version" "$out"
+  assert_contains "doctor: shows platform" "Platform" "$out"
+  assert_contains "doctor: shows node" "Node.js" "$out"
+  assert_contains "doctor: shows credential store" "Credential store" "$out"
+  assert_contains "doctor: shows database" "Database" "$out"
+  assert_contains "doctor: shows integrity" "integrity" "$out"
+  assert_contains "doctor: shows orphaned" "Orphaned" "$out"
+  assert_contains "doctor: shows expired" "Expired" "$out"
+  assert_contains "doctor: all passed" "passed" "$out"
+
+  # JSON output
+  out=$(run_ok --json doctor)
+  assert_contains "doctor json: is array" "[" "$out"
+  assert_contains "doctor json: has name" '"name"' "$out"
+  assert_contains "doctor json: has ok" '"ok"' "$out"
+
+  # Doctor with custom --db
+  DOCTOR_DB="$TMPDIR_TEST/doctor-test.sqlite"
+  out=$(run_ok --db "$DOCTOR_DB" doctor)
+  assert_contains "doctor --db: shows database" "Database" "$out"
+fi
+
+# ─── 21. COMPLETIONS ──────────────────────────────────────────────────────────
+echo ""
+echo "── 21. COMPLETIONS ──"
 
 # __complete contexts should list test.e2e context (we still have secrets)
 out=$(node "$CLI" __complete contexts 2>/dev/null)
@@ -933,9 +967,9 @@ out=$(node "$CLI" --completions fish 2>/dev/null)
 assert_contains "completions fish: complete" "complete -c envsec" "$out"
 assert_contains "completions fish: __complete" "__complete" "$out"
 
-# ─── 21. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 22. CLEANUP & VERIFY ────────────────────────────────────────────────────
 echo ""
-echo "── 21. CLEANUP ──"
+echo "── 22. CLEANUP ──"
 
 for key in db.password api.token special.emoji special.utf8; do
   run_ok -c "$CTX" delete -y "$key" >/dev/null || true

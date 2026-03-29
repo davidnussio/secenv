@@ -8,6 +8,7 @@ import { cmdCommand } from "./cli/cmd.js";
 import { handleComplete } from "./cli/complete.js";
 import { copyCommand } from "./cli/copy.js";
 import { delCommand, deleteCommand } from "./cli/delete.js";
+import { doctorCommand } from "./cli/doctor.js";
 import { envCommand } from "./cli/env.js";
 import { envFileCommand } from "./cli/env-file.js";
 import { getCommand } from "./cli/get.js";
@@ -48,6 +49,7 @@ const command = rootCommand.pipe(
     loadCommand,
     shareCommand,
     auditCommand,
+    doctorCommand,
   ])
 );
 

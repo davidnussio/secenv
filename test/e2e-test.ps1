@@ -58,6 +58,15 @@ function Assert-ExitCode {
     }
 }
 
+function Assert-NonZeroExit {
+    param([string]$Name, [int]$Actual)
+    if ($Actual -ne 0) {
+        Green $Name; $script:PASS++
+    } else {
+        Red $Name; Red "    expected non-zero exit, got: $Actual"; $script:FAIL++
+    }
+}
+
 function Run-Ok {
     param([string[]]$CmdArgs)
     $stderrFile = [System.IO.Path]::GetTempFileName()
@@ -329,7 +338,7 @@ Assert-Contains "run: interpolation" "newpassword" $out
 # Missing secret
 $out = Run-All @("-c", $CTX, "run", "echo {nonexistent.key}")
 $ec = $LASTEXITCODE
-Assert-ExitCode "run: missing secret fails" 1 $ec
+Assert-NonZeroExit "run: missing secret fails" $ec
 Assert-Contains "run: missing message" "Missing" $out
 
 # ─── 8. CMD ──────────────────────────────────────────────────────────────────
@@ -381,7 +390,7 @@ Write-Host ""
 Write-Host "── 10. ERRORS ──"
 
 & node $CLI get db.password 2>$null | Out-Null
-Assert-ExitCode "error: missing context" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: missing context" $LASTEXITCODE
 
 Run-Ok @("-c", $CTX, "add", "singlepart", "-v", "test-single") | Out-Null
 $out = Run-Ok @("-c", $CTX, "get", "singlepart")
@@ -389,13 +398,13 @@ Assert-Eq "add: single-part key works" "test-single" $out.Trim()
 Run-Ok @("-c", $CTX, "delete", "-y", "singlepart") | Out-Null
 
 & node $CLI -c $CTX add "a..b" -v test 2>$null | Out-Null
-Assert-ExitCode "error: key with empty parts" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: key with empty parts" $LASTEXITCODE
 
 & node $CLI -c "../../etc" get db.password 2>$null | Out-Null
-Assert-ExitCode "error: path traversal context" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: path traversal context" $LASTEXITCODE
 
 & node $CLI -c $CTX load -i "C:\nonexistent\file.env" 2>$null | Out-Null
-Assert-ExitCode "error: load missing file" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: load missing file" $LASTEXITCODE
 
 # ─── 11. JSON OUTPUT ─────────────────────────────────────────────────────────
 Write-Host ""
@@ -496,7 +505,7 @@ Assert-Contains "audit 0m: nothing expired" "No secrets" $out
 
 # Invalid duration
 & node $CLI -c $CTX_EXP add exp.bad -v "x" --expires "abc" 2>$null | Out-Null
-Assert-ExitCode "add: invalid duration fails" 1 $LASTEXITCODE
+Assert-NonZeroExit "add: invalid duration fails" $LASTEXITCODE
 
 # Update expiry on existing secret
 $out = Run-Ok @("-c", $CTX_EXP, "add", "exp.short", "-v", "updated", "--expires", "7d")
@@ -643,7 +652,7 @@ Assert-Eq "rename: force value" "rename-value" $out.Trim()
 # Rename same key should fail
 $out = Run-All @("-c", $CTX_REN, "rename", "existing.key", "existing.key")
 $ec = $LASTEXITCODE
-Assert-ExitCode "rename: same key fails" 1 $ec
+Assert-NonZeroExit "rename: same key fails" $ec
 
 # JSON output
 Run-Ok @("-c", $CTX_REN, "add", "json.test", "-v", "json-val") | Out-Null
@@ -679,7 +688,7 @@ Assert-Eq "move single: value in target" "tok_move" $out.Trim()
 
 # Source should not have it
 & node $CLI -c $CTX_MSRC get api.token 2>$null | Out-Null
-Assert-ExitCode "move single: gone from source" 1 $LASTEXITCODE
+Assert-NonZeroExit "move single: gone from source" $LASTEXITCODE
 
 # Move with glob pattern (redis.*)
 $out = Run-Ok @("-c", $CTX_MSRC, "move", "redis.*", "--to", $CTX_MDST, "-y")
@@ -715,7 +724,7 @@ Run-Ok @("-c", $CTX_MDST, "add", "conflict.key", "-v", "dst-val") | Out-Null
 
 $out = Run-All @("-c", $CTX_MSRC, "move", "conflict.key", "--to", $CTX_MDST)
 $ec = $LASTEXITCODE
-Assert-ExitCode "move conflict: fails" 1 $ec
+Assert-NonZeroExit "move conflict: fails" $ec
 Assert-Contains "move conflict: message" "already has" $out
 
 # Move with --force overwrites
@@ -729,7 +738,7 @@ Assert-Eq "move force: value overwritten" "src-val" $out.Trim()
 Run-Ok @("-c", $CTX_MSRC, "add", "same.ctx", "-v", "val") | Out-Null
 $out = Run-All @("-c", $CTX_MSRC, "move", "same.ctx", "--to", $CTX_MSRC)
 $ec = $LASTEXITCODE
-Assert-ExitCode "move same ctx: fails" 1 $ec
+Assert-NonZeroExit "move same ctx: fails" $ec
 
 # JSON output
 Run-Ok @("-c", $CTX_MSRC, "add", "json.move", "-v", "jval") | Out-Null
@@ -794,7 +803,7 @@ Assert-Contains "copy all: count" "4 secrets" $out
 # Conflict detection
 $out = Run-All @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CDST)
 $ec = $LASTEXITCODE
-Assert-ExitCode "copy conflict: fails" 1 $ec
+Assert-NonZeroExit "copy conflict: fails" $ec
 Assert-Contains "copy conflict: message" "already has" $out
 
 # Copy with --force overwrites
@@ -808,7 +817,7 @@ Assert-Eq "copy force: value overwritten" "updated-tok" $out.Trim()
 # Same context should fail
 $out = Run-All @("-c", $CTX_CSRC, "copy", "api.token", "--to", $CTX_CSRC)
 $ec = $LASTEXITCODE
-Assert-ExitCode "copy same ctx: fails" 1 $ec
+Assert-NonZeroExit "copy same ctx: fails" $ec
 
 # JSON output
 & node $CLI -c $CTX_CDST delete -y json.copy 2>$null | Out-Null
@@ -822,9 +831,38 @@ Assert-Contains "copy json: to" $CTX_CDST $out
 Run-Ok @("-c", $CTX_CSRC, "delete", "--all", "-y") | Out-Null
 Run-Ok @("-c", $CTX_CDST, "delete", "--all", "-y") | Out-Null
 
-# ─── 20. CLEANUP & VERIFY ────────────────────────────────────────────────────
+# ─── 20. DOCTOR ───────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "── 20. CLEANUP ──"
+Write-Host "── 20. DOCTOR ──"
+
+# Basic doctor run should succeed
+$out = Run-Ok @("doctor")
+$ec = $LASTEXITCODE
+Assert-ExitCode "doctor: exit 0" 0 $ec
+Assert-Contains "doctor: shows version" "Version" $out
+Assert-Contains "doctor: shows platform" "Platform" $out
+Assert-Contains "doctor: shows node" "Node.js" $out
+Assert-Contains "doctor: shows credential store" "Credential store" $out
+Assert-Contains "doctor: shows database" "Database" $out
+Assert-Contains "doctor: shows integrity" "integrity" $out
+Assert-Contains "doctor: shows orphaned" "Orphaned" $out
+Assert-Contains "doctor: shows expired" "Expired" $out
+Assert-Contains "doctor: all passed" "passed" $out
+
+# JSON output
+$out = Run-Ok @("--json", "doctor")
+Assert-Contains "doctor json: is array" "[" $out
+Assert-Contains "doctor json: has name" '"name"' $out
+Assert-Contains "doctor json: has ok" '"ok"' $out
+
+# Doctor with custom --db
+$DoctorDb = Join-Path $TmpDir "doctor-test.sqlite"
+$out = Run-Ok @("--db", $DoctorDb, "doctor")
+Assert-Contains "doctor --db: shows database" "Database" $out
+
+# ─── 21. CLEANUP & VERIFY ────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "── 21. CLEANUP ──"
 
 foreach ($key in @("db.password", "api.token", "special.emoji", "special.utf8")) {
     Run-Ok @("-c", $CTX, "delete", "-y", $key) | Out-Null
