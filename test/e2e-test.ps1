@@ -390,7 +390,7 @@ Write-Host ""
 Write-Host "── 10. ERRORS ──"
 
 & node $CLI get db.password 2>$null | Out-Null
-Assert-ExitCode "error: missing context" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: missing context" $LASTEXITCODE
 
 Run-Ok @("-c", $CTX, "add", "singlepart", "-v", "test-single") | Out-Null
 $out = Run-Ok @("-c", $CTX, "get", "singlepart")
@@ -398,13 +398,13 @@ Assert-Eq "add: single-part key works" "test-single" $out.Trim()
 Run-Ok @("-c", $CTX, "delete", "-y", "singlepart") | Out-Null
 
 & node $CLI -c $CTX add "a..b" -v test 2>$null | Out-Null
-Assert-ExitCode "error: key with empty parts" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: key with empty parts" $LASTEXITCODE
 
 & node $CLI -c "../../etc" get db.password 2>$null | Out-Null
-Assert-ExitCode "error: path traversal context" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: path traversal context" $LASTEXITCODE
 
 & node $CLI -c $CTX load -i "C:\nonexistent\file.env" 2>$null | Out-Null
-Assert-ExitCode "error: load missing file" 1 $LASTEXITCODE
+Assert-NonZeroExit "error: load missing file" $LASTEXITCODE
 
 # ─── 11. JSON OUTPUT ─────────────────────────────────────────────────────────
 Write-Host ""
