@@ -7,18 +7,14 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: ./.github/actions/setup-and-build
         with:
           registry-url: "https://registry.npmjs.org"
-
-      - name: Bump version from release tag
+      - name: Publish to npm
         run: |
           VERSION=$(node -p "require('./package.json').version")
           if [[ "$VERSION" == *"-beta"* ]]; then
@@ -28,12 +24,8 @@ jobs:
           else
             pnpm publish --no-git-checks
           fi
-
-      - name: Publish
-        run: pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Commit updated package.json
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -42,7 +34,6 @@ jobs:
           git add package.json
           git diff --cached --quiet && echo "No changes to commit" || git commit -m "chore: bump version to ${VERSION}"
           git push origin HEAD:main
-
   update-homebrew:
     needs: publish
     runs-on: ubuntu-latest
